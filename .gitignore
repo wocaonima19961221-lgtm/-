@@ -1,0 +1,8 @@
+.DS_Store
+__pycache__/
+*.pyc
+.venv/
+
+# 本地回测/导出数据，部署网站不需要
+data_*.csv
+result_*.json
