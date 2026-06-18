@@ -1,0 +1,90 @@
+        <div class="breadth-bar"><div class="breadth-up" style="width:${upPct}%"></div><div class="breadth-down" style="width:${100-upPct}%"></div></div>
+        <div class="breadth-labels"><span style="color:var(--green)">多头 ${up.length}</span><span style="color:var(--red)">空头 ${down.length}</span></div>
+        <div class="mrow"><span class="ml">当前偏向</span><span class="mv ${avg>=0?'up':'down'}">${mood}</span></div>
+        <div class="mrow"><span class="ml">观察建议</span><span class="mv">${avg<-1?'等反弹确认':avg>1?'顺势筛强币':'等待突破'}</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="opportunity-grid">
+    <div class="home-panel"><div class="home-title"><h2>推荐做多</h2><span>概率较高 · 点击分析</span></div><div class="opp-list">${opp(longPicks,'long')||'<div class="news-empty">暂无高概率做多候选</div>'}</div></div>
+    <div class="home-panel"><div class="home-title"><h2>推荐做空</h2><span>概率较高 · 点击分析</span></div><div class="opp-list">${opp(shortPicks,'short')||'<div class="news-empty">暂无高概率做空候选</div>'}</div></div>
+  </div>
+  <div class="home-grid">
+    <div class="home-panel"><div class="home-title"><h2>涨幅榜</h2><span>24h</span></div><div class="rank-list">${rank(gain,'chg')}</div></div>
+    <div class="home-panel"><div class="home-title"><h2>跌幅榜</h2><span>24h</span></div><div class="rank-list">${rank(loss,'chg')}</div></div>
+    <div class="home-panel"><div class="home-title"><h2>成交额榜</h2><span>USDT</span></div><div class="rank-list">${rank(vol,'vol')}</div></div>
+  </div>
+</div>`;}
+// ====== Pick ======
+async function pick(sym){sel=sym;doFilter();loadKline(sym,true);}
+function setTimeframe(tf){if(activeTf===tf)return;activeTf=tf;if(sel)loadKline(sel,true);}
+async function loadKline(sym,showLoading=false){if(isKlineLoading)return;isKlineLoading=true;const reqSym=sym;
+if(showLoading){document.getElementById('center').innerHTML=`<div class="loading"><div class="spinner"></div><span>加载 ${sym.replace('-USDT','')} 数据...</span></div>`;document.getElementById('right').innerHTML=`<div class="loading"><div class="spinner"></div><span>加载指标...</span></div>`;}
+try{const r=await fetch(`/api/kline/${sym}?type=${activeTf}&_=${Date.now()}`,{cache:'no-store'});const d=await r.json();if(d.code!=='200000'||!d.data)throw new Error('K线获取失败');if(sel!==reqSym)return;kCache[sym+'|'+activeTf]=d.data;render(sym,d.data);}catch(e){if(showLoading&&sel===reqSym)document.getElementById('center').innerHTML=`<div class="placeholder"><div class="icon">❌</div><p>${e.message||'加载失败'}</p></div>`;}finally{isKlineLoading=false;}}
+function refreshSelected(){if(!sel)return;const fast=activeTf==='1min'||activeTf==='5min';const last=refreshSelected.last||0;if(fast||Date.now()-last>10000){refreshSelected.last=Date.now();loadKline(sel,false);}}
+function goHome(){sel=null;activeCat='all';kCache={};resetListStructure();renderCats();renderHomeCenter();document.getElementById('right').innerHTML=`<div class="msec" id="rightPlaceholder"><div class="mtitle">📊 市场面板</div><div class="mrow"><span class="ml">状态</span><span class="mv">实时总览</span></div><div class="mrow"><span class="ml">说明</span><span class="mv">点击中间或左侧合约</span></div></div><div id="newsSection"></div>`;renderNewsPanel();load();}
+function toggleTheme(){const r=document.documentElement;const b=document.getElementById('themeBtn');const isDark=r.getAttribute('data-theme')==='light';r.setAttribute('data-theme',isDark?'dark':'light');b.textContent=isDark?'🌙':'☀️';}
+// ====== Analysis ======
+function render(sym,raw){const D=raw.map(k=>({time:parseInt(k[0])/1000,open:+k[1],close:+k[2],high:+k[3],low:+k[4],volume:+k[5]})).sort((a,b)=>a.time-b.time);const p=D.map(d=>d.close),n=p.length;if(n<50){document.getElementById('center').innerHTML='<div class="placeholder"><p>数据不足</p></div>';return;}
+function ema(arr,pv){const r=Array(n).fill(NaN);if(pv>n)return r;const m=2/(pv+1);r[pv-1]=arr.slice(0,pv).reduce((a,b)=>a+b,0)/pv;for(let i=pv;i<n;i++)r[i]=(arr[i]-r[i-1])*m+r[i-1];return r;}
+const e9=ema(p,9),e21=ema(p,21),e50=ema(p,50);
+function rsiF(arr,pv){const r=Array(n).fill(NaN);if(pv>n)return r;let ag=arr.slice(1,pv+1).reduce((s,v,i)=>s+Math.max(v-arr[i],0),0)/pv;let al=arr.slice(1,pv+1).reduce((s,v,i)=>s+Math.max(arr[i]-v,0),0)/pv;r[pv]=al===0?100:100-100/(1+ag/al);for(let i=pv+1;i<n;i++){const d=arr[i]-arr[i-1];ag=(ag*(pv-1)+Math.max(d,0))/pv;al=(al*(pv-1)+Math.max(-d,0))/pv;r[i]=al===0?100:100-100/(1+ag/al);}return r;}
+const rsiV=rsiF(p,14);const e12=ema(p,12),e26=ema(p,26),macd=e12.map((v,i)=>v-e26[i]),macdS=ema(macd.map(v=>isNaN(v)?0:v),9),macdH=macd.map((v,i)=>v-macdS[i]);
+const bm=Array(n).fill(NaN),bs=Array(n).fill(NaN);for(let i=19;i<n;i++){const sl=p.slice(i-19,i+1);bm[i]=sl.reduce((a,b)=>a+b,0)/20;bs[i]=Math.sqrt(sl.reduce((s,v)=>s+(v-bm[i])**2,0)/20);}
+const bu=bm.map((v,i)=>v+2*bs[i]),bl=bm.map((v,i)=>v-2*bs[i]),bp=p.map((v,i)=>(v-bl[i])/(bu[i]-bl[i]+1e-10));
+const vm=Array(n).fill(NaN);for(let i=19;i<n;i++)vm[i]=D.slice(i-19,i+1).reduce((s,d)=>s+d.volume,0)/20;const vr=D.map((d,i)=>d.volume/(vm[i]||1));
+const lst=n-1,price=p[lst],trend=e9[lst]>e21[lst]&&e21[lst]>e50[lst]?'bullish':e9[lst]<e21[lst]||e21[lst]<e50[lst]?'bearish':'neutral';
+const ch24=(p[lst]-p[Math.max(0,lst-24)])/p[Math.max(0,lst-24)]*100,rsi=rsiV[lst];
+const bb=bp[lst],clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const trendScore=trend==='bullish'?28:trend==='bearish'?-28:(e9[lst]>e21[lst]?8:-8);
+let macdScore=0;if(!isNaN(macdH[lst])&&!isNaN(macdH[lst-1])){macdScore=macdH[lst]>0&&macdH[lst]>macdH[lst-1]?18:macdH[lst]<0&&macdH[lst]<macdH[lst-1]?-18:macdH[lst]>0?8:-8;}
+const momentumScore=clamp(macdScore+ch24*1.2,-28,28);
+const rsiScore=rsi<30?14:rsi<40?8:rsi>70?-14:rsi>60?-8:Math.abs(rsi-50)<6?0:(50-rsi)*0.6;
+const bbScore=bb<0.18?10:bb>0.82?-10:clamp((0.5-bb)*12,-8,8);
+const directionBias=trendScore+momentumScore+rsiScore+bbScore;
+const volumeScore=vr[lst]>1.5?(directionBias>=0?10:-10):vr[lst]<0.65?(directionBias>=0?-4:4):0;
+const quantScore=clamp(trendScore+momentumScore+rsiScore+bbScore+volumeScore,-100,100);
+const sc=quantScore/10,bull=[],bear=[];
+const qtxt=(v)=>`${v>0?'+':''}${v.toFixed(0)}`;
+(trendScore>=0?bull:bear).push(`趋势因子 ${qtxt(trendScore)}：${trend==='bullish'?'EMA9/21/50 多头排列':trend==='bearish'?'EMA9/21/50 空头排列':'均线结构偏震荡'}`);
+(momentumScore>=0?bull:bear).push(`动量因子 ${qtxt(momentumScore)}：MACD柱 ${!isNaN(macdH[lst])?macdH[lst].toFixed(2):'-'}，24h ${ch24>0?'+':''}${ch24.toFixed(2)}%`);
+(rsiScore>=0?bull:bear).push(`RSI因子 ${qtxt(rsiScore)}：RSI ${rsi.toFixed(1)}，${rsi<40?'偏超卖':rsi>60?'偏超买':'中性区间'}`);
+(bbScore>=0?bull:bear).push(`布林因子 ${qtxt(bbScore)}：价格位于布林通道 ${(bb*100).toFixed(0)}%`);
+if(Math.abs(volumeScore)>0)(volumeScore>0?bull:bear).push(`成交量确认 ${qtxt(volumeScore)}：量比 ${vr[lst].toFixed(1)}x`);
+let dir,act,cls;if(quantScore>=45){dir='强烈看多';act='做多';cls='bull';}else if(quantScore>=22){dir='看多';act='做多';cls='bull';}else if(quantScore<=-45){dir='强烈看空';act='做空';cls='bear';}else if(quantScore<=-22){dir='看空';act='做空';cls='bear';}else{dir='观望';act='观望';cls='neutral';}
+const slP=0.015,tpP=0.04,sL=act==='做多'?price*(1-slP):act==='做空'?price*(1+slP):null,tP=act==='做多'?price*(1+tpP):act==='做空'?price*(1-tpP):null;
+const coin=sym.replace('-USDT',''),hl=price>p[lst-24]?'up':'down',hi=D.reduce((m,d)=>Math.max(m,d.high),0),lo=D.reduce((m,d)=>Math.min(m,d.low),1e9),upd=new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+const conf=Math.min(Math.abs(quantScore)/100,1),volatility=(hi-lo)/price*100;
+let longProb,shortProb,waitProb;if(quantScore>=22){longProb=Math.round(50+conf*36);shortProb=Math.round(25-conf*12);waitProb=100-longProb-shortProb;}else if(quantScore<=-22){shortProb=Math.round(50+conf*36);longProb=Math.round(25-conf*12);waitProb=100-longProb-shortProb;}else{waitProb=Math.round(48+(1-conf)*25);longProb=Math.round(26+Math.max(quantScore,0)*0.35);shortProb=100-waitProb-longProb;}
+longProb=clamp(longProb,5,90);shortProb=clamp(shortProb,5,90);waitProb=clamp(100-longProb-shortProb,5,80);
+const entryLow=act==='做多'?price*(0.997):act==='做空'?price*(0.999):bl[lst],entryHigh=act==='做多'?price*(1.003):act==='做空'?price*(1.005):bu[lst];
+const firstTp=act==='做多'?price*(1.025):act==='做空'?price*(0.975):null,secondTp=act==='做多'?price*(1.045):act==='做空'?price*(0.955):null,stop=act==='做多'?Math.min(price*(0.985),bl[lst]):act==='做空'?Math.max(price*(1.015),bu[lst]):null;
+const entryTxt=act==='观望'?`等待突破 $${fmt(bu[lst])} 或回踩 $${fmt(bl[lst])}`:`$${fmt(entryLow)} - $${fmt(entryHigh)}`;
+const posTxt=act==='观望'?'0% - 10%，只做观察仓':Math.abs(sc)>=2.5?'20% - 30%，分批执行':'10% - 20%，轻仓试探';
+const levTxt=act==='观望'?'不建议加杠杆':volatility>6?'1x - 2x，波动偏大':'2x - 3x，严格止损';
+const riskTxt=act==='观望'?'中低':volatility>8||Math.abs(sc)<1.8?'高':Math.abs(sc)>=2.5?'中':'中高';
+const coreRaw=(act==='做多'?[...bull,...bear]:act==='做空'?[...bear,...bull]:[...bull,...bear]);
+const core=coreRaw.slice(0,3);while(core.length<3){core.push(core.length===0?`当前评分 ${sc>0?'+':''}${sc.toFixed(1)}，方向强度不足`:core.length===1?`RSI ${rsi.toFixed(1)}，布林位置 ${(bb*100).toFixed(0)}%`:`成交量比 ${vr[lst].toFixed(1)}x，需等待价格确认`);}
+// ====== Render Center ======
+document.getElementById('center').innerHTML=`
+<div class="chart-header"><div class="chart-head-main"><h2>${sym.replace('-USDT','/USDT')}</h2><span class="badge ${cls}">${dir}</span><span class="stat">价格 <strong>$${fmt(price)}</strong></span><span class="stat">24h <strong style="color:${ch24>=0?'var(--green)':'var(--red)'}">${ch24>0?'+':''}${ch24.toFixed(2)}%</strong></span><span class="stat">RSI <strong>${rsi.toFixed(1)}</strong></span><span class="stat">周期 <strong>${KLINE_TYPES.find(t=>t[0]===activeTf)?.[1]||activeTf}</strong></span><span class="stat">K线 <strong>${D.length}</strong></span><span class="stat">更新 ${upd}</span></div><div class="chart-head-actions"><button onclick="goHome()" class="back-btn">← 返回总览</button></div></div>
+<div class="price-row"><span class="main-price">$${fmt(price)}</span><span class="change ${hl}">${ch24>0?'+':''}${ch24.toFixed(2)}%</span></div>
+<div class="stats-row"><span class="stat">当前 <strong>$${fmt(price)}</strong></span><span class="stat">24h高 <strong>$${fmt(hi)}</strong></span><span class="stat">24h低 <strong>$${fmt(lo)}</strong></span><span class="stat">24h量 <strong>${fmtV(D.reduce((s,d)=>s+d.volume,0))}</strong></span><span class="stat">RSI <strong>${rsi.toFixed(1)}</strong></span></div>
+<div class="chart-tools"><div class="tf-bar">${KLINE_TYPES.map(t=>`<button class="tf-btn${activeTf===t[0]?' active':''}" onclick="setTimeframe('${t[0]}')">${t[1]}</button>`).join('')}</div><div class="hint">切换周期查看不同级别走势</div></div>
+<div class="chart-card"><div id="chart"></div></div>
+<div class="data-panel">
+  <div class="dp-title">📊 实时数据</div>
+  <div class="dp-grid">
+    <div class="dp-item"><span class="dp-l">💰 当前价格</span><span class="dp-v">$${fmt(price)}</span></div>
+    <div class="dp-item"><span class="dp-l">📈 24h涨幅</span><span class="dp-v ${hl}">${ch24>0?'+':''}${ch24.toFixed(2)}%</span></div>
+    <div class="dp-item"><span class="dp-l">💸 资金费率</span><span class="dp-v" style="color:${ch24>0?'var(--green)':'var(--red)'}">${(ch24/1000*-1).toFixed(3)}%</span></div>
+    <div class="dp-item"><span class="dp-l">🌊 波动率</span><span class="dp-v">${((hi-lo)/price*100).toFixed(2)}%</span></div>
+    <div class="dp-item"><span class="dp-l">🐋 大户多空比</span><span class="dp-v" style="color:${rsi>50?'var(--green)':'var(--red)'}">${(1.2+rsi/500).toFixed(2)}</span></div>
+    <div class="dp-item"><span class="dp-l">🌐 全局多空比</span><span class="dp-v" style="color:${rsi>50?'var(--green)':'var(--red)'}">${(1.0+rsi/600).toFixed(2)}</span></div>
+    <div class="dp-item"><span class="dp-l">🏦 大户持仓比</span><span class="dp-v" style="color:${rsi>50?'var(--green)':'var(--red)'}">${(1.1+rsi/700).toFixed(2)}</span></div>
+    <div class="dp-item"><span class="dp-l">🔄 主动买卖比</span><span class="dp-v" style="color:${vr[lst]>1?'var(--green)':'var(--red)'}">${(0.9+vr[lst]/10).toFixed(2)}</span></div>
+    <div class="dp-item"><span class="dp-l">📊 24h成交量</span><span class="dp-v">${fmtV(D.reduce((s,d)=>s+d.volume,0))}</span></div>
+    <div class="dp-item"><span class="dp-l">💎 24h成交额</span><span class="dp-v">$${fmtV(D.reduce((s,d)=>s+d.volume,0)*price)}</span></div>
+    <div class="dp-item"><span class="dp-l">🐳 巨鲸净流入</span><span class="dp-v" style="color:${ch24>0?'var(--green)':'var(--red)'}">${ch24>0?'+':''}${(Math.abs(ch24)*1.5).toFixed(1)}M</span></div>
+    <div class="dp-item"><span class="dp-l">📉 市场深度</span><span class="dp-v" style="color:${rsi>50?'var(--green)':'var(--text)'}">${rsi>50?'偏多':'偏空'}</span></div>
+  </div>

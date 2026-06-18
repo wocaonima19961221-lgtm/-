@@ -247,7 +247,14 @@ def fear_greed():
     return {'value': None, 'label': 'N/A'}
 
 BASE_DIR = Path(__file__).resolve().parent
-HTML = (BASE_DIR / 'web_template_v3.html').read_text(encoding='utf-8')
+template_file = BASE_DIR / 'web_template_v3.html'
+template_parts = sorted((BASE_DIR / 'template_parts').glob('web_template_v3.html.part*'))
+if template_file.exists():
+    HTML = template_file.read_text(encoding='utf-8')
+elif template_parts:
+    HTML = ''.join(p.read_text(encoding='utf-8') for p in template_parts)
+else:
+    raise RuntimeError('web_template_v3.html not found')
 
 @app.get("/")
 def root():

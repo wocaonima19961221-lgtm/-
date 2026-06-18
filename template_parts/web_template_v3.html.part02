@@ -1,0 +1,90 @@
+.rank-copy strong{display:block;font-size:13px;line-height:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.rank-copy small{display:block;font-size:11px;line-height:15px;color:var(--text3);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.rank-val{font-size:13px;font-weight:800;font-family:'SF Mono',monospace;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;}
+.rank-val.up{color:var(--green);}
+.rank-val.down{color:var(--red);}
+.quick-coins{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;}
+.quick-coin{height:82px;border:1px solid var(--border);background:var(--card);border-radius:8px;padding:9px 8px;cursor:pointer;text-align:center;transition:background 0.12s,border-color 0.12s;overflow:hidden;}
+.quick-coin:hover{background:var(--card2);border-color:var(--border2);}
+.quick-coin img{width:26px;height:26px;border-radius:50%;margin:0 auto 6px;display:block;}
+.quick-coin .q-s{font-size:12px;font-weight:800;}
+.quick-coin .q-p{font-size:11px;color:var(--text2);font-family:'SF Mono',monospace;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums;}
+.quick-coin .q-c{font-size:11px;font-weight:700;margin-top:2px;font-variant-numeric:tabular-nums;}
+.opportunity-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;}
+.opp-list{display:flex;flex-direction:column;gap:8px;}
+.opp-item{height:64px;display:grid;grid-template-columns:minmax(0,1fr) 86px;gap:12px;align-items:center;border:1px solid rgba(61,71,96,0.55);background:rgba(37,45,63,0.55);border-radius:8px;padding:9px 11px;cursor:pointer;transition:background 0.12s,border-color 0.12s;}
+.opp-item:hover{background:var(--card2);border-color:var(--border2);}
+.opp-main{display:grid;grid-template-columns:24px minmax(0,1fr);gap:9px;align-items:center;min-width:0;}
+.opp-main img{width:24px;height:24px;border-radius:50%;display:block;}
+.opp-copy{min-width:0;overflow:hidden;}
+.opp-copy strong{display:block;font-size:13px;line-height:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.opp-copy small{display:block;font-size:11px;color:var(--text3);line-height:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.opp-side{text-align:right;min-width:0;}
+.opp-prob{font-size:16px;font-weight:900;font-family:'SF Mono',monospace;line-height:20px;font-variant-numeric:tabular-nums;}
+.opp-prob.up{color:var(--green);}.opp-prob.down{color:var(--red);}
+.opp-meta{font-size:11px;color:var(--text3);font-family:'SF Mono',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums;}
+@media(max-width:1180px){.home-hero,.home-grid,.opportunity-grid{grid-template-columns:1fr}.quick-coins{grid-template-columns:repeat(3,1fr)}}
+
+/* ===== RIGHT SIDEBAR ===== */
+.right{background:var(--bg2);border-left:1px solid var(--border);overflow-y:auto;padding:14px;}
+.fg-box{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:14px;}
+.fg-box .fg-v{font-size:26px;font-weight:800;min-width:44px;text-align:center;}
+.fg-box .fg-v.fear{color:var(--red);}.fg-box .fg-v.greed{color:var(--green);}.fg-box .fg-v.neutral{color:var(--yellow);}
+.fg-box .fg-info{flex:1;}
+.fg-box .fg-bar{height:5px;background:var(--border2);border-radius:3px;overflow:hidden;margin:3px 0;}
+.fg-box .fg-bar-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--red),var(--yellow),var(--green));transition:width 0.5s;}
+.fg-box .fg-label{font-size:12px;color:var(--text2);}
+.msec{margin-bottom:16px;}
+.msec .mtitle{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px;padding-bottom:5px;border-bottom:1px solid var(--border);}
+.mrow{display:flex;justify-content:space-between;padding:4px 0;font-size:12px;}
+.mrow .ml{color:var(--text2);}
+.mrow .mv{font-weight:500;font-family:'SF Mono',monospace;}
+.mrow .mv.up{color:var(--green);}
+.mrow .mv.down{color:var(--red);}
+.news-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;box-shadow:var(--shadow);}
+.news-head{display:flex;align-items:center;justify-content:space-between;padding:11px 12px 9px;border-bottom:1px solid var(--border);background:linear-gradient(180deg,rgba(59,130,246,0.08),transparent);}
+.news-title{font-size:12px;font-weight:700;letter-spacing:0.3px;color:var(--text);display:flex;align-items:center;gap:6px;}
+.news-live{font-size:10px;font-weight:700;color:var(--red);display:flex;align-items:center;gap:5px;}
+.news-live::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--red);box-shadow:0 0 0 4px rgba(239,68,68,0.12);}
+.news-list{max-height:460px;overflow-y:auto;}
+.news-item{width:100%;display:grid;grid-template-columns:48px 1fr;gap:10px;padding:10px 12px;border:0;border-bottom:1px solid rgba(45,53,72,0.55);text-align:left;background:transparent;color:var(--text2);transition:background 0.12s,color 0.12s;cursor:pointer;font-family:inherit;}
+.news-item:hover{background:var(--card2);color:var(--text);}
+.news-item:last-child{border-bottom:none;}
+.news-time{font-size:10px;color:var(--text3);font-family:'SF Mono',monospace;line-height:1.35;padding-top:2px;}
+.news-text{font-size:12px;line-height:1.45;font-weight:500;word-break:break-word;}
+.news-source{padding:8px 12px;border-top:1px solid var(--border);font-size:10px;color:var(--text3);display:flex;justify-content:space-between;}
+.news-empty{padding:20px 12px;color:var(--text3);font-size:12px;text-align:center;line-height:1.5;}
+.reader-mask{position:fixed;inset:0;background:rgba(0,0,0,0.58);z-index:200;display:none;align-items:center;justify-content:center;padding:18px;}
+.reader-mask.show{display:flex;}
+.reader{width:min(620px,100%);max-height:min(680px,88vh);overflow:hidden;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);box-shadow:0 24px 70px rgba(0,0,0,0.45);display:flex;flex-direction:column;}
+.reader-top{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid var(--border);}
+.reader-kicker{font-size:11px;color:var(--text3);font-weight:700;letter-spacing:0.5px;}
+.reader-close{width:30px;height:30px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text2);cursor:pointer;font-size:18px;line-height:1;}
+.reader-close:hover{color:var(--text);border-color:var(--text3);}
+.reader-body{padding:16px 18px 18px;overflow-y:auto;}
+.reader-body h3{font-size:20px;line-height:1.35;margin-bottom:10px;letter-spacing:0;font-weight:800;}
+.reader-meta{font-size:12px;color:var(--text3);margin-bottom:14px;display:flex;gap:10px;}
+.reader-body p{font-size:14px;line-height:1.75;color:var(--text2);}
+.reader-note{margin-top:18px;padding-top:12px;border-top:1px solid var(--border);font-size:11px;color:var(--text3);}
+
+/* ===== Placeholder ===== */
+.placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--text3);}
+.placeholder .icon{font-size:56px;margin-bottom:16px;opacity:0.5;}
+.placeholder p{font-size:14px;}
+.placeholder .sub{font-size:12px;margin-top:6px;}
+
+/* ===== Loading ===== */
+.loading{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--text2);gap:12px;}
+.spinner{width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="nav">
+  <div class="nav-l" style="flex:1;text-align:center;"><div class="nav-logo" onclick="goHome()" style="display:inline-block;font-size:24px;">📡 CryptoIntel</div></div>
+  <div class="nav-r" style="position:absolute;right:28px;display:flex;gap:8px;align-items:center;"><button class="nav-btn ghost" onclick="location.reload()" id="refreshBtn" style="padding:6px 10px;transition:opacity 0.15s;">↻</button><button class="nav-btn ghost" onclick="toggleTheme()" id="themeBtn">🌙</button></div>
+</div>
+<div class="tabs"><div class="tab active">📊 分析预测</div></div>
+<div class="layout">
+  <div class="left">
+    <div class="search-wrap"><input id="search" placeholder="搜索合约名称或币种..." oninput="doSearch()"></div>

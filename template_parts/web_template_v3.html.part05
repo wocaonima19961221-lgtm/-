@@ -1,0 +1,87 @@
+</div>
+<div class="trade-plan">
+  <div class="trade-plan-head"><div class="trade-plan-title ${cls}"><span class="dot"></span>${act}计划 · ${dir}</div><div class="trade-plan-price">$${fmt(price)}</div></div>
+  <div class="trade-plan-grid">
+    <div class="trade-block">
+      <h3>交易方向</h3>
+      <div class="trade-line"><span class="label">币种：</span><span class="value">${sym.replace('-USDT','/USDT')}</span></div>
+      <div class="trade-line"><span class="label">当前价格：</span><span class="value">$${fmt(price)}</span></div>
+      <div class="trade-line"><span class="label">短线方向：</span><span class="value" style="color:${cls==='bull'?'var(--green)':cls==='bear'?'var(--red)':'var(--yellow)'}">${dir}</span></div>
+      <div class="prob-row"><span class="label">做多概率：</span><div class="prob-bar"><div class="prob-fill long" style="width:${longProb}%"></div></div><span class="prob-num" style="color:var(--green)">${longProb}%</span></div>
+      <div class="prob-row"><span class="label">做空概率：</span><div class="prob-bar"><div class="prob-fill short" style="width:${shortProb}%"></div></div><span class="prob-num" style="color:var(--red)">${shortProb}%</span></div>
+      <div class="prob-row"><span class="label">观望概率：</span><div class="prob-bar"><div class="prob-fill wait" style="width:${waitProb}%"></div></div><span class="prob-num" style="color:var(--yellow)">${waitProb}%</span></div>
+    </div>
+    <div class="trade-block">
+      <h3>核心判断：</h3>
+      <div class="trade-line"><span class="label">1.</span><span class="value">${core[0]}</span></div>
+      <div class="trade-line"><span class="label">2.</span><span class="value">${core[1]}</span></div>
+      <div class="trade-line"><span class="label">3.</span><span class="value">${core[2]}</span></div>
+    </div>
+    <div class="trade-block">
+      <h3>交易建议：</h3>
+      <div class="trade-line"><span class="label">- 操作：</span><span class="value" style="color:${cls==='bull'?'var(--green)':cls==='bear'?'var(--red)':'var(--yellow)'}">${act}</span></div>
+      <div class="trade-line"><span class="label">- 入场区间：</span><span class="value">${entryTxt}</span></div>
+      <div class="trade-line"><span class="label">- 止损位：</span><span class="value">${act==='观望'?'暂无，等待信号确认':'$'+fmt(stop)}</span></div>
+      <div class="trade-line"><span class="label">- 第一止盈：</span><span class="value">${act==='观望'?'暂无':'$'+fmt(firstTp)}</span></div>
+      <div class="trade-line"><span class="label">- 第二止盈：</span><span class="value">${act==='观望'?'暂无':'$'+fmt(secondTp)}</span></div>
+      <div class="trade-line"><span class="label">- 仓位建议：</span><span class="value">${posTxt}</span></div>
+      <div class="trade-line"><span class="label">- 杠杆建议：</span><span class="value">${levTxt}</span></div>
+      <div class="trade-line"><span class="label">- 风险等级：</span><span class="value">${riskTxt}</span></div>
+    </div>
+    <div class="trade-block">
+	      <h3>量化因子：</h3>
+	      <div class="trade-line"><span class="label">总评分：</span><span class="value">${quantScore>0?'+':''}${quantScore.toFixed(0)} / 100 · 置信度 ${(conf*10).toFixed(1)}/10</span></div>
+	      <div class="trade-line"><span class="label">趋势：</span><span class="value">${qtxt(trendScore)}</span></div>
+	      <div class="trade-line"><span class="label">动量：</span><span class="value">${qtxt(momentumScore)}</span></div>
+	      <div class="trade-line"><span class="label">RSI：</span><span class="value">${qtxt(rsiScore)} · ${rsi.toFixed(1)}</span></div>
+	      <div class="trade-line"><span class="label">布林：</span><span class="value">${qtxt(bbScore)} · ${(bb*100).toFixed(0)}%</span></div>
+	      <div class="trade-line"><span class="label">量能：</span><span class="value">${qtxt(volumeScore)} · ${vr[lst].toFixed(1)}x</span></div>
+	      <div class="trade-line"><span class="label">波动率：</span><span class="value">${volatility.toFixed(2)}%</span></div>
+	    </div>
+  </div>
+</div>
+`;
+// ====== Render Right ======
+document.getElementById('right').innerHTML=`
+<div class="fg-box" id="fgBox"><div class="fg-v neutral" id="fgV">?</div><div class="fg-info"><div class="fg-bar"><div class="fg-bar-fill" id="fgF" style="width:50%"></div></div><div class="fg-label" id="fgL">加载情绪指数...</div></div></div>
+<div class="msec"><div class="mtitle">📊 市场数据</div>
+<div class="mrow"><span class="ml">当前价格</span><span class="mv">$${fmt(price)}</span></div>
+<div class="mrow"><span class="ml">24h涨跌</span><span class="mv ${hl}">${ch24>0?'+':''}${ch24.toFixed(2)}%</span></div>
+<div class="mrow"><span class="ml">24h最高</span><span class="mv">$${fmt(hi)}</span></div>
+<div class="mrow"><span class="ml">24h最低</span><span class="mv">$${fmt(lo)}</span></div>
+<div class="mrow"><span class="ml">RSI(14)</span><span class="mv" style="color:${rsi>65?'var(--red)':rsi<35?'var(--green)':'var(--text)'}">${rsi.toFixed(1)}</span></div></div>
+<div class="msec"><div class="mtitle">📈 技术指标</div>
+<div class="mrow"><span class="ml">趋势</span><span class="mv" style="color:${trend==='bullish'?'var(--green)':trend==='bearish'?'var(--red)':'var(--text2)'}">${trend==='bullish'?'多头':trend==='bearish'?'空头':'震荡'}</span></div>
+<div class="mrow"><span class="ml">布林位置</span><span class="mv">${(bb*100).toFixed(0)}%</span></div>
+<div class="mrow"><span class="ml">MACD柱</span><span class="mv" style="color:${macdH[lst]>0?'var(--green)':'var(--red)'}">${!isNaN(macdH[lst])?macdH[lst].toFixed(2):'-'}</span></div>
+<div class="mrow"><span class="ml">成交量比</span><span class="mv">${vr[lst].toFixed(1)}x</span></div></div>
+<div class="msec"><div class="mtitle">🎯 支撑阻力</div>
+<div class="mrow"><span class="ml">压力(上轨)</span><span class="mv" style="color:var(--red)">$${fmt(bu[lst])}</span></div>
+<div class="mrow"><span class="ml">支撑(下轨)</span><span class="mv" style="color:var(--green)">$${fmt(bl[lst])}</span></div>
+<div class="mrow"><span class="ml">中轨</span><span class="mv">$${fmt(bm[lst])}</span></div></div>
+<div class="msec"><div class="mtitle">📉 均线</div>
+<div class="mrow"><span class="ml">EMA9</span><span class="mv" style="color:${e9[lst]>price?'var(--red)':'var(--green)'}">$${fmt(e9[lst])}</span></div>
+<div class="mrow"><span class="ml">EMA21</span><span class="mv" style="color:${e21[lst]>price?'var(--red)':'var(--green)'}">$${fmt(e21[lst])}</span></div>
+<div class="mrow"><span class="ml">EMA50</span><span class="mv" style="color:${e50[lst]>price?'var(--red)':'var(--green)'}">$${fmt(e50[lst])}</span></div></div>
+<div id="newsSection"></div>
+`;
+renderNewsPanel();
+// ====== Chart ======
+setTimeout(()=>{const el=document.getElementById('chart');if(!el||typeof LightweightCharts==='undefined')return;
+try{const c=LightweightCharts.createChart(el,{layout:{background:{color:'transparent'},textColor:'#8b949e'},grid:{vertLines:{color:'#252d3f'},horzLines:{color:'#252d3f'}},crosshair:{mode:LightweightCharts.CrosshairMode.Normal},timeScale:{borderColor:'#2d3548',timeVisible:true,secondsVisible:false},rightPriceScale:{borderColor:'#2d3548'},width:el.clientWidth,height:340});
+c.addCandlestickSeries({upColor:'#22c55e',downColor:'#ef4444',borderUpColor:'#22c55e',borderDownColor:'#ef4444',wickUpColor:'#22c55e',wickDownColor:'#ef4444'}).setData(D.map(d=>({time:d.time,open:d.open,high:d.high,low:d.low,close:d.close})));
+const al=(a,cl)=>{const s=c.addLineSeries({color:cl,lineWidth:1,priceLineVisible:false});s.setData(a.map((v,i)=>({time:D[i].time,value:v})).filter(d=>!isNaN(d.value)));return s;};
+al(e9,'#3b82f6');al(e21,'#f59e0b');al(e50,'#8b5cf6');
+const vs=c.addHistogramSeries({priceFormat:{type:'volume'},priceScaleId:'volume'});c.priceScale('volume').applyOptions({scaleMargins:{top:0.85,bottom:0}});
+vs.setData(D.map((d,i)=>({time:d.time,value:d.volume,color:d.close>=d.open?'rgba(34,197,94,0.25)':'rgba(239,68,68,0.25)'})));
+new ResizeObserver(()=>c.applyOptions({width:el.clientWidth})).observe(el);}catch(e){el.innerHTML='<div style="padding:80px 0;text-align:center;color:var(--red);font-size:13px;">图表渲染失败</div>';}},100);
+// Fear & Greed
+fetch('/api/fear-greed').then(r=>r.json()).then(f=>{if(f.value){document.getElementById('fgV').textContent=f.value;document.getElementById('fgV').className='fg-v '+(f.value<40?'fear':f.value>60?'greed':'neutral');document.getElementById('fgF').style.width=f.value+'%';document.getElementById('fgL').textContent=f.label;}}).catch(()=>{});}
+load();
+loadNews();
+setInterval(load,1000);
+setInterval(refreshSelected,1000);
+setInterval(loadNews,300000);
+</script>
+</body>
+</html>

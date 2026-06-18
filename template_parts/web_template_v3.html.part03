@@ -1,0 +1,90 @@
+    <div class="cats" id="cats"></div>
+    <div class="sort-bar" id="sortBar"></div>
+    <div class="list-header"><span>名称</span><span>最新价</span><span>24h涨跌</span></div>
+    <div class="coin-list" id="coinList"></div>
+  </div>
+  <div class="center" id="center">
+    <div class="placeholder"><div class="icon">🔍</div><p>选择左侧一个合约</p><div class="sub">系统将基于技术指标给出交易方向建议</div></div>
+  </div>
+  <div class="right" id="right">
+    <div class="msec" id="rightPlaceholder"><div class="mtitle">📊 市场面板</div><div class="mrow"><span class="ml">状态</span><span class="mv">等待选择</span></div><div class="mrow"><span class="ml">说明</span><span class="mv">左侧选择合约</span></div></div>
+    <div id="newsSection"></div>
+  </div>
+</div>
+<div class="reader-mask" id="newsReader" onclick="closeNewsReader(event)">
+  <div class="reader" role="dialog" aria-modal="true" aria-labelledby="readerTitle">
+    <div class="reader-top"><div class="reader-kicker">站内快讯阅读</div><button class="reader-close" onclick="closeNewsReader(event)">×</button></div>
+    <div class="reader-body"><h3 id="readerTitle"></h3><div class="reader-meta"><span id="readerTime"></span><span>新闻源：加密市场资讯</span></div><p id="readerSummary"></p><div class="reader-note">当前内容来自 RSS 摘要并自动翻译，阅读不会跳转到外部网站。</div></div>
+  </div>
+</div>
+<script>
+// ====== Config ======
+const CMC_IDS={BTC:1,ETH:1027,USDT:825,USDC:3408,BNB:1839,SOL:5426,XRP:52,ADA:2010,DOGE:74,DOT:6636,SHIB:5994,TRX:1958,AVAX:5805,UNI:7083,LINK:1975,TON:11419,ATOM:3794,ETC:1321,XLM:512,BCH:1831,ALGO:4030,VET:3077,FIL:2280,NEAR:6535,ICP:8916,APT:21794,ARB:11841,OP:11840,SUI:20947,PEPE:24478,FLOKI:10804,AAVE:7278,CRV:6538,MKR:1518,COMP:5692,LTC:2,XMR:328,ZEC:1437,DASH:131,EOS:1765,WAVES:4847,KSM:5034,XTZ:2011,ZIL:2469,IOTA:1720,NEO:1376,SAND:6210,MANA:1966,AXS:6783,GALA:7080,ENJ:2130,CHZ:4066,WLD:13502,BLUR:23121,TIA:22861,SEI:23149,INJ:7226,RUNE:4157,FTM:3513,EGLD:6892,HBAR:4642,KAS:20396,MINA:8646,FLOW:4558,KAVA:4846,FET:3773,GRT:6719,ENS:13855,TAO:22974,ONDO:21159,JUP:29210,PYTH:28177,STRK:22691,ENA:30171,WIF:28752,BONK:23095,ORDI:25028,NOT:28850,PEOPLE:14806,LDO:8000,IMX:10603,RENDER:5690,AR:5632,STX:4847};
+function baseSym(s){return String(s||'').replace('-USDT','').toUpperCase();}
+function logoSources(sym){const b=baseSym(sym),lo=b.toLowerCase(),id=CMC_IDS[b],arr=[];if(id)arr.push(`https://s2.coinmarketcap.com/static/img/coins/64x64/${id}.png`);arr.push(`https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/32/color/${lo}.png`);arr.push(`https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/32/icon/${lo}.png`);return arr;}
+function logo(s){return logoSources(s)[0];}
+function iconHtml(sym,cls){const b=baseSym(sym);return`<img class="coin-badge ${cls}" src="${logoSources(b)[0]}" data-symbol="${b}" data-i="0" onerror="fallbackIcon(this)">`;}
+function fallbackIcon(img){const b=img.dataset.symbol,src=logoSources(b),i=(+img.dataset.i||0)+1;if(i<src.length){img.dataset.i=i;img.src=src[i];return;}const sp=document.createElement('span');sp.className=img.className;sp.textContent=b.slice(0,Math.min(3,b.length));img.replaceWith(sp);}
+const CN={BTC:'比特币',ETH:'以太坊',SOL:'Solana',XRP:'瑞波币',ADA:'艾达币',DOGE:'狗狗币',SHIB:'柴犬币',LTC:'莱特币',XMR:'门罗币',ZEC:'大零币',BNB:'币安币',PEPE:'Pepe',UNI:'Uniswap',FIL:'Filecoin',ATOM:'Cosmos',BCH:'比特币现金',SAND:'The Sandbox',MANA:'Decentraland',AXS:'Axie Infinity',WLD:'Worldcoin',TSLA:'特斯拉',AAPL:'苹果',SPY:'标普500 ETF',QQQ:'纳指100 ETF',TSM:'台积电',MSTR:'Strategy',AMZN:'亚马逊',COIN:'Coinbase',PLTR:'Palantir',CRCL:'Circle',LLY:'礼来',NVO:'诺和诺德',BB:'黑莓',NOK:'诺基亚',EWT:'台湾ETF',ASTS:'AST SpaceMobile',NVDA:'英伟达',MSFT:'微软',META:'Meta',GOOGL:'谷歌',AMD:'AMD',NFLX:'奈飞'};
+function cn(s){return CN[s.replace('-USDT','')]||'';}
+function getCat(c){const b=c.symbol.replace('-USDT','');const v=c.turnover_24h;if(c.market_type==='stock_perp')return{i:'🇺🇸',id:'stock'};
+if(['DOGE','SHIB','PEPE','FLOKI','BONK','WIF'].includes(b))return{i:'🤑',id:'meme'};
+if(v>=5e6&&['BTC','ETH','SOL','BNB','XRP','ADA','DOT','LINK','AVAX','UNI','LTC','XMR','ZEC','ATOM','ETC','XLM','TRX','NEAR','APT','SUI','FIL','AAVE','INJ','SEI','RUNE','FTM','KAS'].includes(b))return{i:'💎',id:'major'};
+if(v>=5e5)return{i:'🪙',id:'alt'};return{i:'🔹',id:'micro'};}
+const CATS=[{i:'📋',l:'全部',id:'all'},{i:'🇺🇸',l:'美股永续',id:'stock'},{i:'💎',l:'主流',id:'major'},{i:'🤑',l:'Meme',id:'meme'},{i:'🪙',l:'山寨',id:'alt'},{i:'🔹',l:'微型',id:'micro'}];
+const KLINE_TYPES=[['1min','1m'],['5min','5m'],['15min','15m'],['30min','30m'],['1hour','1h'],['4hour','4h'],['1day','1D']];
+let activeCat='all',sortBy='vol',allC=[],sel=null,kCache={},newsCache=[],isKlineLoading=false,isContractsLoading=false,homeRanks=null,homeRanksTs=0,lastListKey='',renderedSymbols=[],activeTf='1min';
+function fmt(p){if(p==null)return'-';if(p>=1000)return Number(p).toLocaleString('en-US',{minFD:2,maxFD:2});return Number(p).toFixed(p<1?6:2);}
+function fmtV(v){if(!v)return'-';if(v>=1e9)return(v/1e9).toFixed(1)+'B';if(v>=1e6)return(v/1e6).toFixed(1)+'M';return v.toFixed(0);}
+function esc(s){return String(s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+function newsTime(t){const d=new Date(t);if(!isNaN(d)){return d.toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit',hour12:false});}return String(t||'').slice(17,22)||'刚刚';}
+function openNewsReader(i){const n=newsCache[i];if(!n)return;document.getElementById('readerTitle').textContent=n.title;document.getElementById('readerTime').textContent=newsTime(n.time);document.getElementById('readerSummary').textContent=n.summary||n.title;document.getElementById('newsReader').classList.add('show');}
+function closeNewsReader(e){if(e&&e.target.closest&&e.target.closest('.reader')&&e.target.className!=='reader-close')return;document.getElementById('newsReader').classList.remove('show');}
+function renderNewsPanel(){const el=document.getElementById('newsSection');if(!el)return;
+  if(!newsCache.length){el.innerHTML='<div class="news-card"><div class="news-head"><div class="news-title">📰 7×24 小时快讯</div><div class="news-live">实时</div></div><div class="news-empty">正在拉取并翻译快讯...</div></div>';return;}
+  el.innerHTML=`<div class="news-card"><div class="news-head"><div class="news-title">📰 7×24 小时快讯</div><div class="news-live">实时</div></div><div class="news-list">${newsCache.slice(0,24).map((n,i)=>`<button class="news-item" onclick="openNewsReader(${i})"><span class="news-time">${newsTime(n.time)}</span><span class="news-text">${esc(n.title)}</span></button>`).join('')}</div><div class="news-source"><span>新闻源：加密市场资讯</span><span>点击站内阅读</span></div></div>`;
+}
+async function loadNews(){renderNewsPanel();try{const r=await fetch('/api/news');const d=await r.json();newsCache=d.news||[];renderNewsPanel();}catch(e){const el=document.getElementById('newsSection');if(el)el.innerHTML='<div class="news-card"><div class="news-head"><div class="news-title">📰 7×24 小时快讯</div><div class="news-live">实时</div></div><div class="news-empty">快讯暂时不可用，稍后自动刷新。</div></div>';}}
+// ====== Load ======
+async function load(){if(isContractsLoading)return;isContractsLoading=true;renderCats();try{const r=await fetch(`/api/contracts?limit=1000&_=${Date.now()}`,{cache:'no-store'});const d=await r.json();allC=d.contracts;doFilter();}catch(e){console.error(e);}finally{isContractsLoading=false;}}
+function renderCats(){document.getElementById('cats').innerHTML=CATS.map(c=>`<button class="cat${c.id===activeCat?' active':''}" onclick="switchCat('${c.id}')">${c.i} ${c.l}</button>`).join('');renderSortBar();}
+function renderSortBar(){const b=document.getElementById('sortBar');b.innerHTML=`<button class="sort-btn${sortBy==='vol'?' active':''}" onclick="setSort('vol')">📊 成交额</button><button class="sort-btn${sortBy==='gain'||sortBy==='loss'?' active':''}" onclick="cycleSort()">${sortBy==='gain'?'🔥 涨幅 ↓':sortBy==='loss'?'📉 跌幅 ↓':'🔥 涨跌幅'}</button>`;}
+function resetListStructure(){lastListKey='';renderedSymbols=[];}
+function setSort(s){sortBy=s;resetListStructure();renderSortBar();doFilter();}
+function cycleSort(){sortBy=sortBy==='gain'?'loss':'gain';resetListStructure();renderSortBar();doFilter();}
+function switchCat(id){activeCat=id;resetListStructure();renderCats();doFilter();}
+function doSearch(){resetListStructure();doFilter();}
+function doFilter(){let f=allC;if(activeCat!=='all'){f=f.filter(c=>getCat(c).id===activeCat);}
+const q=document.getElementById('search').value.toUpperCase().trim();if(q){const q2=q.replace('USDT','').replace('-','');f=f.filter(c=>{const b=c.symbol.replace('-USDT','');return c.symbol.includes(q2)||b.includes(q2)||cn(c.symbol).toUpperCase().includes(q2);});}
+const listKey=activeCat+'|'+sortBy+'|'+q;if(listKey!==lastListKey||!renderedSymbols.length){if(sortBy==='gain')f.sort((a,b)=>b.change_24h-a.change_24h);else if(sortBy==='loss')f.sort((a,b)=>a.change_24h-b.change_24h);else f.sort((a,b)=>b.turnover_24h-a.turnover_24h);renderList(f);lastListKey=listKey;}else{const bySym=Object.fromEntries(f.map(c=>[c.symbol,c]));updateListValues(renderedSymbols.map(s=>bySym[s]).filter(Boolean));}
+if(!sel)renderHomeCenter();}
+function renderList(arr){renderedSymbols=arr.map(c=>c.symbol);const list=document.getElementById('coinList');if(!arr.length){list.innerHTML=`<div class="placeholder" style="height:auto;padding:28px 14px;"><p>${activeCat==='stock'?'当前网络无法访问 Binance 美股永续':'暂无匹配合约'}</p><div class="sub">${activeCat==='stock'?'接口恢复后会自动显示 TSLA、AAPL、SPY、QQQ 等合约':'换个分类或搜索词试试'}</div></div>`;return;}list.innerHTML=arr.map(c=>{const a=c.symbol===sel?' active':'';const ch=c.change_24h;const b=c.symbol.replace('-USDT','');const nm=cn(c.symbol);const im=iconHtml(c.symbol,'coin-badge-sm');return`<div class="coin-row${a}" data-symbol="${c.symbol}" onclick="pick('${c.symbol}')"><div class="name">${im}${b}${nm?`<span class="cn">${nm}</span>`:''}</div><div class="prc">${fmt(c.price)}</div><div class="chg${ch>0?' up':' down'}">${ch>0?'+':''}${ch}%</div></div>`;}).join('');}
+function updateListValues(arr){arr.forEach(c=>{const row=document.querySelector(`.coin-row[data-symbol="${c.symbol}"]`);if(!row)return;const ch=c.change_24h;row.classList.toggle('active',c.symbol===sel);const p=row.querySelector('.prc');const cg=row.querySelector('.chg');if(p)p.textContent=fmt(c.price);if(cg){cg.className='chg'+(ch>0?' up':' down');cg.textContent=(ch>0?'+':'')+ch+'%';}});}
+function renderHomeCenter(){const el=document.getElementById('center');if(!el)return;if(!allC.length){el.innerHTML=`<div class="loading"><div class="spinner"></div><span>加载实时市场...</span></div>`;return;}
+const now=new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+const up=allC.filter(c=>c.change_24h>0),down=allC.filter(c=>c.change_24h<0),flat=allC.length-up.length-down.length,upPct=Math.round(up.length/allC.length*100);
+const bySym=Object.fromEntries(allC.map(c=>[c.symbol,c]));
+if(!homeRanks||Date.now()-homeRanksTs>15000){homeRanks={gain:[...allC].filter(c=>c.change_24h>0).sort((a,b)=>b.change_24h-a.change_24h).slice(0,5).map(c=>c.symbol),loss:[...allC].filter(c=>c.change_24h<0).sort((a,b)=>a.change_24h-b.change_24h).slice(0,5).map(c=>c.symbol),vol:[...allC].sort((a,b)=>b.turnover_24h-a.turnover_24h).slice(0,5).map(c=>c.symbol)};homeRanksTs=Date.now();}
+const gain=homeRanks.gain.map(s=>bySym[s]).filter(Boolean),loss=homeRanks.loss.map(s=>bySym[s]).filter(Boolean),vol=homeRanks.vol.map(s=>bySym[s]).filter(Boolean);
+const avg=allC.reduce((s,c)=>s+c.change_24h,0)/allC.length,totalVol=allC.reduce((s,c)=>s+c.turnover_24h,0),hot=vol[0],mood=avg>1?'偏强':avg<-1?'偏弱':'震荡';
+const rank=(arr,type)=>arr.map(c=>{const b=c.symbol.replace('-USDT',''),im=iconHtml(c.symbol,'coin-badge-md'),val=type==='vol'?'$'+fmtV(c.turnover_24h):(c.change_24h>0?'+':'')+c.change_24h+'%';return`<div class="rank-item" onclick="pick('${c.symbol}')"><div class="rank-name">${im}<div class="rank-copy"><strong>${b}</strong><small>${cn(c.symbol)||'USDT 永续'}</small></div></div><div class="rank-val ${c.change_24h>=0?'up':'down'}">${val}</div></div>`;}).join('');
+const clampHome=(v,a,b)=>Math.max(a,Math.min(b,v));
+const liquid=allC.filter(c=>c.market_type!=='stock_perp'&&c.turnover_24h>=5e6&&Math.abs(c.change_24h)<90);
+const chance=(c,side)=>{const liq=clampHome(Math.log10(c.turnover_24h+1)*5,18,42),move=clampHome(Math.abs(c.change_24h)*2.1,2,30),bias=side==='long'?(c.change_24h>0?14:-24):(c.change_24h<0?14:-24),market=side==='long'?clampHome(avg*2,-8,8):clampHome(-avg*2,-8,8);return Math.round(clampHome(46+bias+liq*0.22+move*0.55+market,42,84));};
+const longPicks=liquid.filter(c=>c.change_24h>0.35).map(c=>({...c,prob:chance(c,'long')})).sort((a,b)=>b.prob-a.prob||b.turnover_24h-a.turnover_24h).slice(0,4);
+const shortPicks=liquid.filter(c=>c.change_24h<-0.35).map(c=>({...c,prob:chance(c,'short')})).sort((a,b)=>b.prob-a.prob||b.turnover_24h-a.turnover_24h).slice(0,4);
+const opp=(arr,side)=>arr.map(c=>{const b=c.symbol.replace('-USDT',''),im=iconHtml(c.symbol,'coin-badge-md'),cls=side==='long'?'up':'down',label=side==='long'?'做多':'做空';return`<div class="opp-item" onclick="pick('${c.symbol}')"><div class="opp-main">${im}<div class="opp-copy"><strong>${b} <span class="${cls}">${c.change_24h>0?'+':''}${c.change_24h}%</span></strong><small>${cn(c.symbol)||'USDT 永续'} · $${fmt(c.price)}</small></div></div><div class="opp-side"><div class="opp-prob ${cls}">${c.prob}%</div><div class="opp-meta">${label}概率</div></div></div>`;}).join('');
+el.innerHTML=`<div class="home-dash">
+  <div class="home-hero">
+    <div class="home-panel">
+      <div class="home-title"><h2>实时市场雷达</h2><span class="pulse-dot">更新 ${now}</span></div>
+      <div class="home-metrics">
+        <div class="home-metric"><div class="k">市场状态</div><div class="home-metric-main"><div class="v" style="color:${avg>=0?'var(--green)':'var(--red)'}">${mood}</div><div class="s">平均涨跌 ${avg>=0?'+':''}${avg.toFixed(2)}%</div></div></div>
+        <div class="home-metric"><div class="k">上涨 / 下跌</div><div class="home-metric-main"><div class="v">${up.length}/${down.length}</div><div class="s">${flat} 个横盘</div></div></div>
+        <div class="home-metric"><div class="k">24h成交额</div><div class="home-metric-main"><div class="v">$${fmtV(totalVol)}</div><div class="s">覆盖 ${allC.length} 个合约</div></div></div>
+        <div class="home-metric"><div class="k">成交龙头</div><div class="home-metric-main"><div class="v">${hot.symbol.replace('-USDT','')}</div><div class="s">$${fmtV(hot.turnover_24h)}</div></div></div>
+      </div>
+    </div>
+    <div class="home-panel">
+      <div class="home-title"><h2>多空宽度</h2><span>${upPct}% 上涨</span></div>
+      <div class="breadth-wrap">
