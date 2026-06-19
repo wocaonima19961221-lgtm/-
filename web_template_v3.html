@@ -410,7 +410,8 @@ if(v>=5e6&&['BTC','ETH','SOL','BNB','XRP','ADA','DOT','LINK','AVAX','UNI','LTC',
 if(v>=5e5)return{i:'🪙',id:'alt'};return{i:'🔹',id:'micro'};}
 const CATS=[{i:'📋',l:'全部',id:'all'},{i:'🇺🇸',l:'美股永续',id:'stock'},{i:'💎',l:'主流',id:'major'},{i:'🤑',l:'Meme',id:'meme'},{i:'🪙',l:'山寨',id:'alt'},{i:'🔹',l:'微型',id:'micro'}];
 const KLINE_TYPES=[['1min','1m'],['5min','5m'],['15min','15m'],['30min','30m'],['1hour','1h'],['4hour','4h'],['1day','1D']];
-let activeCat='all',sortBy='vol',allC=[],sel=null,kCache={},newsCache=[],isKlineLoading=false,isContractsLoading=false,homeRanks=null,homeRanksTs=0,lastListKey='',renderedSymbols=[],activeTf='1min';
+const MTF_TYPES=['15min','30min','1hour','4hour'];
+let activeCat='all',sortBy='vol',allC=[],sel=null,kCache={},kCacheTs={},newsCache=[],isKlineLoading=false,isContractsLoading=false,homeRanks=null,homeRanksTs=0,lastListKey='',renderedSymbols=[],activeTf='1min';
 function fmt(p){if(p==null)return'-';if(p>=1000)return Number(p).toLocaleString('en-US',{minFD:2,maxFD:2});return Number(p).toFixed(p<1?6:2);}
 function fmtV(v){if(!v)return'-';if(v>=1e9)return(v/1e9).toFixed(1)+'B';if(v>=1e6)return(v/1e6).toFixed(1)+'M';return v.toFixed(0);}
 function esc(s){return String(s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
@@ -490,58 +491,74 @@ el.innerHTML=`<div class="home-dash">
 // ====== Pick ======
 async function pick(sym,source=''){sel=sym;doFilter();if(isMobileView())toggleMobilePicker('close');await loadKline(sym,true);if(source==='list')scrollToMobileAnalysis();}
 function setTimeframe(tf){if(activeTf===tf)return;activeTf=tf;if(sel)loadKline(sel,true);}
+async function fetchKlineData(sym,tf,fresh=false){const key=sym+'|'+tf,now=Date.now(),ttl=tf===activeTf?900:30000;if(!fresh&&kCache[key]&&now-(kCacheTs[key]||0)<ttl)return kCache[key];const r=await fetch(`/api/kline/${sym}?type=${tf}&_=${now}`,{cache:'no-store'});const d=await r.json();if(d.code!=='200000'||!d.data)throw new Error('K线获取失败');kCache[key]=d.data;kCacheTs[key]=now;return d.data;}
 async function loadKline(sym,showLoading=false){if(isKlineLoading)return;isKlineLoading=true;const reqSym=sym;
 if(showLoading){document.getElementById('center').innerHTML=`<div class="loading"><div class="spinner"></div><span>加载 ${sym.replace('-USDT','')} 数据...</span></div>`;document.getElementById('right').innerHTML=`<div class="loading"><div class="spinner"></div><span>加载指标...</span></div>`;}
-try{const r=await fetch(`/api/kline/${sym}?type=${activeTf}&_=${Date.now()}`,{cache:'no-store'});const d=await r.json();if(d.code!=='200000'||!d.data)throw new Error('K线获取失败');if(sel!==reqSym)return;kCache[sym+'|'+activeTf]=d.data;render(sym,d.data);}catch(e){if(showLoading&&sel===reqSym)document.getElementById('center').innerHTML=`<div class="placeholder"><div class="icon">❌</div><p>${e.message||'加载失败'}</p></div>`;}finally{isKlineLoading=false;}}
+try{const main=await fetchKlineData(sym,activeTf,true);const ctx={[activeTf]:main};await Promise.all(MTF_TYPES.map(async tf=>{try{ctx[tf]=await fetchKlineData(sym,tf,false);}catch(e){ctx[tf]=null;}}));if(sel!==reqSym)return;render(sym,main,ctx);}catch(e){if(sel===reqSym){document.getElementById('center').innerHTML=`<div class="placeholder"><div class="icon">❌</div><p>数据获取失败，请稍后刷新。</p></div>`;document.getElementById('right').innerHTML=`<div class="msec"><div class="mtitle">数据状态</div><div class="mrow"><span class="ml">状态</span><span class="mv down">获取失败</span></div><div class="mrow"><span class="ml">说明</span><span class="mv">请稍后刷新</span></div></div>`;}}finally{isKlineLoading=false;}}
 function refreshSelected(){if(!sel)return;const fast=activeTf==='1min'||activeTf==='5min';const last=refreshSelected.last||0;if(fast||Date.now()-last>10000){refreshSelected.last=Date.now();loadKline(sel,false);}}
-function goHome(){sel=null;activeCat='all';kCache={};resetListStructure();toggleMobilePicker('open');renderCats();renderHomeCenter();document.getElementById('right').innerHTML=`<div class="msec" id="rightPlaceholder"><div class="mtitle">📊 市场面板</div><div class="mrow"><span class="ml">状态</span><span class="mv">实时总览</span></div><div class="mrow"><span class="ml">说明</span><span class="mv">点击中间或左侧合约</span></div></div><div id="newsSection"></div>`;renderNewsPanel();load();}
+function goHome(){sel=null;activeCat='all';kCache={};kCacheTs={};resetListStructure();toggleMobilePicker('open');renderCats();renderHomeCenter();document.getElementById('right').innerHTML=`<div class="msec" id="rightPlaceholder"><div class="mtitle">📊 市场面板</div><div class="mrow"><span class="ml">状态</span><span class="mv">实时总览</span></div><div class="mrow"><span class="ml">说明</span><span class="mv">点击中间或左侧合约</span></div></div><div id="newsSection"></div>`;renderNewsPanel();load();}
 function toggleTheme(){const r=document.documentElement;const b=document.getElementById('themeBtn');const isDark=r.getAttribute('data-theme')==='light';r.setAttribute('data-theme',isDark?'dark':'light');b.textContent=isDark?'🌙':'☀️';}
 // ====== Analysis ======
-function render(sym,raw){const D=raw.map(k=>({time:parseInt(k[0])/1000,open:+k[1],close:+k[2],high:+k[3],low:+k[4],volume:+k[5]})).sort((a,b)=>a.time-b.time);const p=D.map(d=>d.close),n=p.length;if(n<50){document.getElementById('center').innerHTML='<div class="placeholder"><p>数据不足</p></div>';return;}
+function render(sym,raw,ctx={}){const D=raw.map(k=>({time:parseInt(k[0]),open:+k[1],close:+k[2],high:+k[3],low:+k[4],volume:+k[5]})).sort((a,b)=>a.time-b.time);const p=D.map(d=>d.close),n=p.length;if(n<80){document.getElementById('center').innerHTML='<div class="placeholder"><p>数据不足，策略输出观望。</p></div>';return;}
 function ema(arr,pv){const r=Array(n).fill(NaN);if(pv>n)return r;const m=2/(pv+1);r[pv-1]=arr.slice(0,pv).reduce((a,b)=>a+b,0)/pv;for(let i=pv;i<n;i++)r[i]=(arr[i]-r[i-1])*m+r[i-1];return r;}
-const e9=ema(p,9),e21=ema(p,21),e50=ema(p,50);
+function ma(arr,pv){const r=Array(n).fill(NaN);for(let i=pv-1;i<n;i++)r[i]=arr.slice(i-pv+1,i+1).reduce((a,b)=>a+b,0)/pv;return r;}
+const e9=ema(p,9),e20=ema(p,20),e21=ema(p,21),e50=ema(p,50),e200=ema(p,200),m20=ma(p,20);
 function rsiF(arr,pv){const r=Array(n).fill(NaN);if(pv>n)return r;let ag=arr.slice(1,pv+1).reduce((s,v,i)=>s+Math.max(v-arr[i],0),0)/pv;let al=arr.slice(1,pv+1).reduce((s,v,i)=>s+Math.max(arr[i]-v,0),0)/pv;r[pv]=al===0?100:100-100/(1+ag/al);for(let i=pv+1;i<n;i++){const d=arr[i]-arr[i-1];ag=(ag*(pv-1)+Math.max(d,0))/pv;al=(al*(pv-1)+Math.max(-d,0))/pv;r[i]=al===0?100:100-100/(1+ag/al);}return r;}
 const rsiV=rsiF(p,14);const e12=ema(p,12),e26=ema(p,26),macd=e12.map((v,i)=>v-e26[i]),macdS=ema(macd.map(v=>isNaN(v)?0:v),9),macdH=macd.map((v,i)=>v-macdS[i]);
+const atr=Array(n).fill(NaN);for(let i=1;i<n;i++){const tr=Math.max(D[i].high-D[i].low,Math.abs(D[i].high-D[i-1].close),Math.abs(D[i].low-D[i-1].close));if(i===14){let s=0;for(let j=1;j<=14;j++)s+=Math.max(D[j].high-D[j].low,Math.abs(D[j].high-D[j-1].close),Math.abs(D[j].low-D[j-1].close));atr[i]=s/14;}else if(i>14)atr[i]=(atr[i-1]*13+tr)/14;}
 const bm=Array(n).fill(NaN),bs=Array(n).fill(NaN);for(let i=19;i<n;i++){const sl=p.slice(i-19,i+1);bm[i]=sl.reduce((a,b)=>a+b,0)/20;bs[i]=Math.sqrt(sl.reduce((s,v)=>s+(v-bm[i])**2,0)/20);}
 const bu=bm.map((v,i)=>v+2*bs[i]),bl=bm.map((v,i)=>v-2*bs[i]),bp=p.map((v,i)=>(v-bl[i])/(bu[i]-bl[i]+1e-10));
 const vm=Array(n).fill(NaN);for(let i=19;i<n;i++)vm[i]=D.slice(i-19,i+1).reduce((s,d)=>s+d.volume,0)/20;const vr=D.map((d,i)=>d.volume/(vm[i]||1));
-const lst=n-1,price=p[lst],trend=e9[lst]>e21[lst]&&e21[lst]>e50[lst]?'bullish':e9[lst]<e21[lst]||e21[lst]<e50[lst]?'bearish':'neutral';
-const ch24=(p[lst]-p[Math.max(0,lst-24)])/p[Math.max(0,lst-24)]*100,rsi=rsiV[lst];
-const bb=bp[lst],clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-const trendScore=trend==='bullish'?28:trend==='bearish'?-28:(e9[lst]>e21[lst]?8:-8);
-let macdScore=0;if(!isNaN(macdH[lst])&&!isNaN(macdH[lst-1])){macdScore=macdH[lst]>0&&macdH[lst]>macdH[lst-1]?18:macdH[lst]<0&&macdH[lst]<macdH[lst-1]?-18:macdH[lst]>0?8:-8;}
-const momentumScore=clamp(macdScore+ch24*1.2,-28,28);
-const rsiScore=rsi<30?14:rsi<40?8:rsi>70?-14:rsi>60?-8:Math.abs(rsi-50)<6?0:(50-rsi)*0.6;
-const bbScore=bb<0.18?10:bb>0.82?-10:clamp((0.5-bb)*12,-8,8);
-const directionBias=trendScore+momentumScore+rsiScore+bbScore;
-const volumeScore=vr[lst]>1.5?(directionBias>=0?10:-10):vr[lst]<0.65?(directionBias>=0?-4:4):0;
-const quantScore=clamp(trendScore+momentumScore+rsiScore+bbScore+volumeScore,-100,100);
-const sc=quantScore/10,bull=[],bear=[];
-const qtxt=(v)=>`${v>0?'+':''}${v.toFixed(0)}`;
-(trendScore>=0?bull:bear).push(`趋势因子 ${qtxt(trendScore)}：${trend==='bullish'?'EMA9/21/50 多头排列':trend==='bearish'?'EMA9/21/50 空头排列':'均线结构偏震荡'}`);
-(momentumScore>=0?bull:bear).push(`动量因子 ${qtxt(momentumScore)}：MACD柱 ${!isNaN(macdH[lst])?macdH[lst].toFixed(2):'-'}，24h ${ch24>0?'+':''}${ch24.toFixed(2)}%`);
-(rsiScore>=0?bull:bear).push(`RSI因子 ${qtxt(rsiScore)}：RSI ${rsi.toFixed(1)}，${rsi<40?'偏超卖':rsi>60?'偏超买':'中性区间'}`);
-(bbScore>=0?bull:bear).push(`布林因子 ${qtxt(bbScore)}：价格位于布林通道 ${(bb*100).toFixed(0)}%`);
-if(Math.abs(volumeScore)>0)(volumeScore>0?bull:bear).push(`成交量确认 ${qtxt(volumeScore)}：量比 ${vr[lst].toFixed(1)}x`);
-let dir,act,cls;if(quantScore>=45){dir='强烈看多';act='做多';cls='bull';}else if(quantScore>=22){dir='看多';act='做多';cls='bull';}else if(quantScore<=-45){dir='强烈看空';act='做空';cls='bear';}else if(quantScore<=-22){dir='看空';act='做空';cls='bear';}else{dir='观望';act='观望';cls='neutral';}
-const slP=0.015,tpP=0.04,sL=act==='做多'?price*(1-slP):act==='做空'?price*(1+slP):null,tP=act==='做多'?price*(1+tpP):act==='做空'?price*(1-tpP):null;
-const coin=sym.replace('-USDT',''),hl=price>p[lst-24]?'up':'down',hi=D.reduce((m,d)=>Math.max(m,d.high),0),lo=D.reduce((m,d)=>Math.min(m,d.low),1e9),upd=new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
-const conf=Math.min(Math.abs(quantScore)/100,1),volatility=(hi-lo)/price*100;
-let longProb,shortProb,waitProb;if(quantScore>=22){longProb=Math.round(50+conf*36);shortProb=Math.round(25-conf*12);waitProb=100-longProb-shortProb;}else if(quantScore<=-22){shortProb=Math.round(50+conf*36);longProb=Math.round(25-conf*12);waitProb=100-longProb-shortProb;}else{waitProb=Math.round(48+(1-conf)*25);longProb=Math.round(26+Math.max(quantScore,0)*0.35);shortProb=100-waitProb-longProb;}
-longProb=clamp(longProb,5,90);shortProb=clamp(shortProb,5,90);waitProb=clamp(100-longProb-shortProb,5,80);
-const entryLow=act==='做多'?price*(0.997):act==='做空'?price*(0.999):bl[lst],entryHigh=act==='做多'?price*(1.003):act==='做空'?price*(1.005):bu[lst];
-const firstTp=act==='做多'?price*(1.025):act==='做空'?price*(0.975):null,secondTp=act==='做多'?price*(1.045):act==='做空'?price*(0.955):null,stop=act==='做多'?Math.min(price*(0.985),bl[lst]):act==='做空'?Math.max(price*(1.015),bu[lst]):null;
-const entryTxt=act==='观望'?`等待突破 $${fmt(bu[lst])} 或回踩 $${fmt(bl[lst])}`:`$${fmt(entryLow)} - $${fmt(entryHigh)}`;
-const posTxt=act==='观望'?'0% - 10%，只做观察仓':Math.abs(sc)>=2.5?'20% - 30%，分批执行':'10% - 20%，轻仓试探';
-const levTxt=act==='观望'?'不建议加杠杆':volatility>6?'1x - 2x，波动偏大':'2x - 3x，严格止损';
-const riskTxt=act==='观望'?'中低':volatility>8||Math.abs(sc)<1.8?'高':Math.abs(sc)>=2.5?'中':'中高';
-const coreRaw=(act==='做多'?[...bull,...bear]:act==='做空'?[...bear,...bull]:[...bull,...bear]);
-const core=coreRaw.slice(0,3);while(core.length<3){core.push(core.length===0?`当前评分 ${sc>0?'+':''}${sc.toFixed(1)}，方向强度不足`:core.length===1?`RSI ${rsi.toFixed(1)}，布林位置 ${(bb*100).toFixed(0)}%`:`成交量比 ${vr[lst].toFixed(1)}x，需等待价格确认`);}
+const lst=n-1,price=p[lst],rsi=rsiV[lst],bb=bp[lst],clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const info=allC.find(c=>c.symbol===sym)||{},ch24=Number.isFinite(+info.change_24h)?+info.change_24h:(p[lst]-p[Math.max(0,lst-24)])/p[Math.max(0,lst-24)]*100;
+const hi=+info.high_24h||D.reduce((m,d)=>Math.max(m,d.high),0),lo=+info.low_24h||D.reduce((m,d)=>Math.min(m,d.low),1e99),vol24=+info.volume_24h||D.reduce((s,d)=>s+d.volume,0),turnover24=+info.turnover_24h||vol24*price;
+const recent=D.slice(Math.max(0,n-80)),support=Math.min(bl[lst]||price,...recent.map(d=>d.low)),resistance=Math.max(bu[lst]||price,...recent.map(d=>d.high));
+const atrNow=atr[lst]||price*0.015,atrPct=atrNow/price*100,volatility=(hi-lo)/price*100,upd=new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+function trendOf(rawSet){if(!rawSet||rawSet.length<80)return'insufficient';const X=rawSet.map(k=>({time:+k[0],close:+k[2]})).sort((a,b)=>a.time-b.time),c=X.map(x=>x.close),m=c.length;function em(arr,pv){const r=Array(m).fill(NaN);if(m<pv)return r;const q=2/(pv+1);r[pv-1]=arr.slice(0,pv).reduce((a,b)=>a+b,0)/pv;for(let i=pv;i<m;i++)r[i]=(arr[i]-r[i-1])*q+r[i-1];return r;}const a20=em(c,20),a50=em(c,50),a200=em(c,200),i=m-1;if(m>=200&&c[i]>a20[i]&&a20[i]>a50[i]&&a50[i]>a200[i])return'bullish';if(m>=200&&c[i]<a20[i]&&a20[i]<a50[i]&&a50[i]<a200[i])return'bearish';if(c[i]>a50[i]&&a20[i]>a50[i])return'bullish';if(c[i]<a50[i]&&a20[i]<a50[i])return'bearish';return'sideways';}
+const mtf={m15:trendOf(ctx['15min']),m30:trendOf(ctx['30min']),h1:trendOf(ctx['1hour']),h4:trendOf(ctx['4hour'])};
+const longAligned=mtf.h4==='bullish'&&mtf.h1==='bullish'&&!['bearish'].includes(mtf.m15)&&!['bearish'].includes(mtf.m30);
+const shortAligned=mtf.h4==='bearish'&&mtf.h1==='bearish'&&!['bullish'].includes(mtf.m15)&&!['bullish'].includes(mtf.m30);
+const conflict=(!longAligned&&!shortAligned)||(mtf.h4==='bullish'&&mtf.h1==='bearish')||(mtf.h4==='bearish'&&mtf.h1==='bullish');
+const side=longAligned?1:shortAligned?-1:0,trend=side>0?'bullish':side<0?'bearish':'neutral',bull=[],bear=[],wait=[],qtxt=v=>`${v>0?'+':''}${v.toFixed(0)}`;
+const trendScore=side?((side>0&&price>e20[lst]&&e20[lst]>e50[lst])||(side<0&&price<e20[lst]&&e20[lst]<e50[lst])?25:18):8;
+let momentumScore=0;if(side>0)momentumScore+=(rsi>=45&&rsi<=65?8:rsi>65?3:2)+(macdH[lst]>macdH[lst-1]?7:2)+(macdH[lst]>0?5:0);else if(side<0)momentumScore+=(rsi>=35&&rsi<=55?8:rsi<35?3:2)+(macdH[lst]<macdH[lst-1]?7:2)+(macdH[lst]<0?5:0);else momentumScore=6;
+const volumeScore=vr[lst]>=1.2?15:vr[lst]>=0.85?9:4;
+const volatilityScore=atrPct>5?3:atrPct>3?8:atrPct>0.15?15:9;
+const rangePos=(price-support)/(resistance-support+1e-10),middleRange=rangePos>0.38&&rangePos<0.62;
+const srScore=side>0?(rangePos<0.45?15:rangePos<0.65?8:3):side<0?(rangePos>0.55?15:rangePos>0.35?8:3):5;
+const mtfScore=(longAligned||shortAligned)?10:0,totalScore=clamp(trendScore+momentumScore+volumeScore+volatilityScore+srScore+mtfScore,0,100),quantScore=side*totalScore,sc=totalScore/10;
+if(side>0)bull.push(`多周期共振：4h 与 1h 偏多，15m/30m 未明显反向`);else if(side<0)bear.push(`多周期共振：4h 与 1h 偏空，15m/30m 未明显反向`);else wait.push('多周期方向不一致，不能用小周期信号对抗大周期');
+bull.push(`趋势分 ${trendScore}/25：价格与 EMA20/50/200 的相对位置已纳入判断`);
+(momentumScore>=10?bull:bear).push(`动量分 ${momentumScore}/20：RSI ${rsi.toFixed(1)}，MACD柱 ${!isNaN(macdH[lst])?macdH[lst].toFixed(2):'-'}`);
+(volumeScore>=9?bull:bear).push(`成交量分 ${volumeScore}/15：量比 ${vr[lst].toFixed(1)}x`);
+if(conflict)wait.push('4h、1h、30m、15m 至少一个关键周期冲突');
+if(middleRange)wait.push('价格处于支撑压力区间中部，入场优势不足');
+if(volumeScore<9)wait.push('成交量低于 20 根均量要求');
+if(atrPct>5)wait.push('ATR 波动异常，容易扫止损');
+let act='观望',dir='观望',cls='neutral',entryLow=null,entryHigh=null,stop=null,firstTp=null,secondTp=null,rr=0;
+if(side>0){entryLow=price-atrNow*0.25;entryHigh=price+atrNow*0.15;stop=Math.min(price-atrNow*1.6,support*0.995);const risk=Math.max(((entryLow+entryHigh)/2)-stop,price*0.002);firstTp=((entryLow+entryHigh)/2)+risk*1.6;secondTp=((entryLow+entryHigh)/2)+risk*2.4;rr=(firstTp-((entryLow+entryHigh)/2))/risk;}
+if(side<0){entryLow=price-atrNow*0.15;entryHigh=price+atrNow*0.25;stop=Math.max(price+atrNow*1.6,resistance*1.005);const risk=Math.max(stop-((entryLow+entryHigh)/2),price*0.002);firstTp=((entryLow+entryHigh)/2)-risk*1.6;secondTp=((entryLow+entryHigh)/2)-risk*2.4;rr=(((entryLow+entryHigh)/2)-firstTp)/risk;}
+if(totalScore<70)wait.push(`策略评分 ${totalScore}/100 低于 70，按规则观望`);
+if(rr&&rr<1.5)wait.push(`盈亏比 ${rr.toFixed(1)} 低于 1:1.5`);
+if(!stop||!firstTp||!secondTp)wait.push('交易计划缺少完整止损/止盈');
+if(!wait.length&&side>0){act='做多';dir=totalScore>=85?'强烈看多':'看多';cls='bull';}
+else if(!wait.length&&side<0){act='做空';dir=totalScore>=85?'强烈看空':'看空';cls='bear';}
+else{entryLow=bl[lst];entryHigh=bu[lst];stop=null;firstTp=null;secondTp=null;rr=0;}
+const hl=ch24>=0?'up':'down',conf=totalScore/100;
+let longProb=side>0&&!wait.length?clamp(Math.round(42+totalScore*0.52),5,88):side<0?clamp(Math.round(20-totalScore*0.08),5,35):clamp(Math.round(28+Math.max(0,quantScore)*0.12),8,42);
+let shortProb=side<0&&!wait.length?clamp(Math.round(42+totalScore*0.52),5,88):side>0?clamp(Math.round(20-totalScore*0.08),5,35):clamp(Math.round(28+Math.max(0,-quantScore)*0.12),8,42);
+let waitProb=clamp(100-longProb-shortProb,8,86);if(act==='观望'){waitProb=clamp(Math.max(waitProb,58),58,90);const remain=100-waitProb;longProb=Math.round(remain*(side>=0?0.55:0.45));shortProb=remain-longProb;}
+const entryTxt=act==='观望'?`等待突破 $${fmt(resistance)} 或跌破 $${fmt(support)} 后重新评估`:`$${fmt(entryLow)} - $${fmt(entryHigh)}`;
+const posTxt=act==='观望'?'0% - 10%，只做观察仓':atrPct>3?'10% - 15%，波动偏大':'15% - 25%，分批执行';
+const levTxt=act==='观望'?'不建议加杠杆':atrPct>3?'1x - 2x':'2x - 3x，严格止损';
+const riskTxt=act==='观望'?'中低':atrPct>3||totalScore<75?'高':totalScore>=85?'中低':'中';
+const coreRaw=(act==='做多'?[...bull,...bear]:act==='做空'?[...bear,...bull]:[...wait,...bull,...bear]);
+const core=coreRaw.slice(0,3);while(core.length<3){core.push(core.length===0?`当前评分 ${totalScore}/100，方向强度不足`:core.length===1?`支撑 $${fmt(support)}，压力 $${fmt(resistance)}`:`等待 4h/1h 与 15m/30m 重新共振`);}
 // ====== Render Center ======
 document.getElementById('center').innerHTML=`
 <div class="chart-header"><div class="chart-head-main"><h2>${sym.replace('-USDT','/USDT')}</h2><span class="badge ${cls}">${dir}</span><span class="stat">价格 <strong>$${fmt(price)}</strong></span><span class="stat">24h <strong style="color:${ch24>=0?'var(--green)':'var(--red)'}">${ch24>0?'+':''}${ch24.toFixed(2)}%</strong></span><span class="stat">RSI <strong>${rsi.toFixed(1)}</strong></span><span class="stat">周期 <strong>${KLINE_TYPES.find(t=>t[0]===activeTf)?.[1]||activeTf}</strong></span><span class="stat">K线 <strong>${D.length}</strong></span><span class="stat">更新 ${upd}</span></div><div class="chart-head-actions"><button onclick="goHome()" class="back-btn">← 返回总览</button></div></div>
 <div class="price-row"><span class="main-price">$${fmt(price)}</span><span class="change ${hl}">${ch24>0?'+':''}${ch24.toFixed(2)}%</span></div>
-<div class="stats-row"><span class="stat">当前 <strong>$${fmt(price)}</strong></span><span class="stat">24h高 <strong>$${fmt(hi)}</strong></span><span class="stat">24h低 <strong>$${fmt(lo)}</strong></span><span class="stat">24h量 <strong>${fmtV(D.reduce((s,d)=>s+d.volume,0))}</strong></span><span class="stat">RSI <strong>${rsi.toFixed(1)}</strong></span></div>
+<div class="stats-row"><span class="stat">当前 <strong>$${fmt(price)}</strong></span><span class="stat">24h高 <strong>$${fmt(hi)}</strong></span><span class="stat">24h低 <strong>$${fmt(lo)}</strong></span><span class="stat">24h量 <strong>${fmtV(vol24)}</strong></span><span class="stat">RSI <strong>${rsi.toFixed(1)}</strong></span></div>
 <div class="chart-tools"><div class="tf-bar">${KLINE_TYPES.map(t=>`<button class="tf-btn${activeTf===t[0]?' active':''}" onclick="setTimeframe('${t[0]}')">${t[1]}</button>`).join('')}</div><div class="hint">切换周期查看不同级别走势</div></div>
 <div class="chart-card"><div id="chart"></div></div>
 <div class="fg-box center-fg"><div class="fg-v neutral">?</div><div class="fg-info"><div class="fg-bar"><div class="fg-bar-fill" style="width:50%"></div></div><div class="fg-label">加载市场情绪...</div></div></div>
@@ -556,8 +573,8 @@ document.getElementById('center').innerHTML=`
     <div class="dp-item"><span class="dp-l">🌐 全局多空比</span><span class="dp-v" style="color:${rsi>50?'var(--green)':'var(--red)'}">${(1.0+rsi/600).toFixed(2)}</span></div>
     <div class="dp-item"><span class="dp-l">🏦 大户持仓比</span><span class="dp-v" style="color:${rsi>50?'var(--green)':'var(--red)'}">${(1.1+rsi/700).toFixed(2)}</span></div>
     <div class="dp-item"><span class="dp-l">🔄 主动买卖比</span><span class="dp-v" style="color:${vr[lst]>1?'var(--green)':'var(--red)'}">${(0.9+vr[lst]/10).toFixed(2)}</span></div>
-    <div class="dp-item"><span class="dp-l">📊 24h成交量</span><span class="dp-v">${fmtV(D.reduce((s,d)=>s+d.volume,0))}</span></div>
-    <div class="dp-item"><span class="dp-l">💎 24h成交额</span><span class="dp-v">$${fmtV(D.reduce((s,d)=>s+d.volume,0)*price)}</span></div>
+    <div class="dp-item"><span class="dp-l">📊 24h成交量</span><span class="dp-v">${fmtV(vol24)}</span></div>
+    <div class="dp-item"><span class="dp-l">💎 24h成交额</span><span class="dp-v">$${fmtV(turnover24)}</span></div>
     <div class="dp-item"><span class="dp-l">🐳 巨鲸净流入</span><span class="dp-v" style="color:${ch24>0?'var(--green)':'var(--red)'}">${ch24>0?'+':''}${(Math.abs(ch24)*1.5).toFixed(1)}M</span></div>
     <div class="dp-item"><span class="dp-l">📉 市场深度</span><span class="dp-v" style="color:${rsi>50?'var(--green)':'var(--text)'}">${rsi>50?'偏多':'偏空'}</span></div>
   </div>
@@ -587,19 +604,20 @@ document.getElementById('center').innerHTML=`
       <div class="trade-line"><span class="label">- 止损位：</span><span class="value">${act==='观望'?'暂无，等待信号确认':'$'+fmt(stop)}</span></div>
       <div class="trade-line"><span class="label">- 第一止盈：</span><span class="value">${act==='观望'?'暂无':'$'+fmt(firstTp)}</span></div>
       <div class="trade-line"><span class="label">- 第二止盈：</span><span class="value">${act==='观望'?'暂无':'$'+fmt(secondTp)}</span></div>
+      <div class="trade-line"><span class="label">- 盈亏比：</span><span class="value">${act==='观望'?'暂无':'1:'+rr.toFixed(1)}</span></div>
       <div class="trade-line"><span class="label">- 仓位建议：</span><span class="value">${posTxt}</span></div>
       <div class="trade-line"><span class="label">- 杠杆建议：</span><span class="value">${levTxt}</span></div>
       <div class="trade-line"><span class="label">- 风险等级：</span><span class="value">${riskTxt}</span></div>
     </div>
     <div class="trade-block">
 	      <h3>量化因子：</h3>
-	      <div class="trade-line"><span class="label">总评分：</span><span class="value">${quantScore>0?'+':''}${quantScore.toFixed(0)} / 100 · 置信度 ${(conf*10).toFixed(1)}/10</span></div>
-	      <div class="trade-line"><span class="label">趋势：</span><span class="value">${qtxt(trendScore)}</span></div>
-	      <div class="trade-line"><span class="label">动量：</span><span class="value">${qtxt(momentumScore)}</span></div>
-	      <div class="trade-line"><span class="label">RSI：</span><span class="value">${qtxt(rsiScore)} · ${rsi.toFixed(1)}</span></div>
-	      <div class="trade-line"><span class="label">布林：</span><span class="value">${qtxt(bbScore)} · ${(bb*100).toFixed(0)}%</span></div>
-	      <div class="trade-line"><span class="label">量能：</span><span class="value">${qtxt(volumeScore)} · ${vr[lst].toFixed(1)}x</span></div>
-	      <div class="trade-line"><span class="label">波动率：</span><span class="value">${volatility.toFixed(2)}%</span></div>
+	      <div class="trade-line"><span class="label">总评分：</span><span class="value">${totalScore.toFixed(0)} / 100 · 置信度 ${(conf*10).toFixed(1)}/10</span></div>
+	      <div class="trade-line"><span class="label">趋势：</span><span class="value">${trendScore}/25</span></div>
+	      <div class="trade-line"><span class="label">动量：</span><span class="value">${momentumScore}/20</span></div>
+	      <div class="trade-line"><span class="label">支撑压力：</span><span class="value">${srScore}/15</span></div>
+	      <div class="trade-line"><span class="label">量能：</span><span class="value">${volumeScore}/15 · ${vr[lst].toFixed(1)}x</span></div>
+	      <div class="trade-line"><span class="label">波动：</span><span class="value">${volatilityScore}/15 · ATR ${atrPct.toFixed(2)}%</span></div>
+	      <div class="trade-line"><span class="label">多周期：</span><span class="value">${mtfScore}/10 · 4h:${mtf.h4} 1h:${mtf.h1}</span></div>
 	    </div>
   </div>
 </div>
@@ -623,9 +641,10 @@ document.getElementById('right').innerHTML=`
 <div class="mrow"><span class="ml">支撑(下轨)</span><span class="mv" style="color:var(--green)">$${fmt(bl[lst])}</span></div>
 <div class="mrow"><span class="ml">中轨</span><span class="mv">$${fmt(bm[lst])}</span></div></div>
 <div class="msec"><div class="mtitle">📉 均线</div>
-<div class="mrow"><span class="ml">EMA9</span><span class="mv" style="color:${e9[lst]>price?'var(--red)':'var(--green)'}">$${fmt(e9[lst])}</span></div>
-<div class="mrow"><span class="ml">EMA21</span><span class="mv" style="color:${e21[lst]>price?'var(--red)':'var(--green)'}">$${fmt(e21[lst])}</span></div>
-<div class="mrow"><span class="ml">EMA50</span><span class="mv" style="color:${e50[lst]>price?'var(--red)':'var(--green)'}">$${fmt(e50[lst])}</span></div></div>
+<div class="mrow"><span class="ml">MA20</span><span class="mv" style="color:${m20[lst]>price?'var(--red)':'var(--green)'}">$${fmt(m20[lst])}</span></div>
+<div class="mrow"><span class="ml">EMA20</span><span class="mv" style="color:${e20[lst]>price?'var(--red)':'var(--green)'}">$${fmt(e20[lst])}</span></div>
+<div class="mrow"><span class="ml">EMA50</span><span class="mv" style="color:${e50[lst]>price?'var(--red)':'var(--green)'}">$${fmt(e50[lst])}</span></div>
+<div class="mrow"><span class="ml">EMA200</span><span class="mv" style="color:${e200[lst]>price?'var(--red)':'var(--green)'}">${isNaN(e200[lst])?'数据不足':'$'+fmt(e200[lst])}</span></div></div>
 <div id="newsSection"></div>
 `;
 renderNewsPanel();

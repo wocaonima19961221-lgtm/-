@@ -63,6 +63,9 @@ def load_binance_stock_contracts():
             'symbol': f'{base}-USDT',
             'price': price,
             'change_24h': round(float(t.get('priceChangePercent', 0) or 0), 2),
+            'high_24h': float(t.get('highPrice', 0) or 0),
+            'low_24h': float(t.get('lowPrice', 0) or 0),
+            'volume_24h': float(t.get('volume', 0) or 0),
             'turnover_24h': vol,
             'source': 'binance',
             'market_type': 'stock_perp',
@@ -144,6 +147,9 @@ def load_contracts(force=False):
             if price <= 0 or vol <= 0: continue
             contracts.append({'symbol': sym, 'price': price,
                 'change_24h': round(float(t.get('changeRate', 0) or 0) * 100, 2),
+                'high_24h': float(t.get('high', 0) or 0),
+                'low_24h': float(t.get('low', 0) or 0),
+                'volume_24h': float(t.get('vol', 0) or 0),
                 'turnover_24h': vol, 'source': 'kucoin', 'market_type': 'crypto'})
         contracts.extend(load_binance_stock_contracts())
         contracts.sort(key=lambda x: x['turnover_24h'], reverse=True)
