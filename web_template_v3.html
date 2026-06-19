@@ -497,9 +497,10 @@ function setTimeframe(tf){if(activeTf===tf)return;activeTf=tf;if(sel)loadKline(s
 async function fetchKlineData(sym,tf,fresh=false){const key=sym+'|'+tf,now=Date.now(),ttl=tf===activeTf?900:30000;if(!fresh&&kCache[key]&&now-(kCacheTs[key]||0)<ttl)return kCache[key];const r=await fetch(`/api/kline/${sym}?type=${tf}&_=${now}`,{cache:'no-store'});const d=await r.json();if(d.code!=='200000'||!d.data)throw new Error('K线获取失败');kCache[key]=d.data;kCacheTs[key]=now;return d.data;}
 async function loadKline(sym,showLoading=false){if(isKlineLoading)return;isKlineLoading=true;const reqSym=sym;
 if(showLoading){document.getElementById('center').innerHTML=`<div class="loading"><div class="spinner"></div><span>加载 ${sym.replace('-USDT','')} 数据...</span></div>`;document.getElementById('right').innerHTML=`<div class="loading"><div class="spinner"></div><span>加载指标...</span></div>`;}
-try{const main=await fetchKlineData(sym,activeTf,true);const ctx={[activeTf]:main};await Promise.all(MTF_TYPES.map(async tf=>{try{ctx[tf]=await fetchKlineData(sym,tf,false);}catch(e){ctx[tf]=null;}}));if(sel!==reqSym)return;render(sym,main,ctx);}catch(e){if(sel===reqSym){document.getElementById('center').innerHTML=`<div class="placeholder"><div class="icon">❌</div><p>数据获取失败，请稍后刷新。</p></div>`;document.getElementById('right').innerHTML=`<div class="msec"><div class="mtitle">数据状态</div><div class="mrow"><span class="ml">状态</span><span class="mv down">获取失败</span></div><div class="mrow"><span class="ml">说明</span><span class="mv">请稍后刷新</span></div></div>`;}}finally{isKlineLoading=false;}}
-function refreshSelected(){if(!sel)return;const fast=activeTf==='1min'||activeTf==='5min';const last=refreshSelected.last||0;if(fast||Date.now()-last>10000){refreshSelected.last=Date.now();loadKline(sel,false);}}
-function refreshApp(){if(sel){Object.keys(kCache).forEach(k=>{if(k.startsWith(sel+'|')){delete kCache[k];delete kCacheTs[k];}});loadKline(sel,true);return;}load();}
+try{setRefreshState('loading');const main=await fetchKlineData(sym,activeTf,true);const ctx={[activeTf]:main};await Promise.all(MTF_TYPES.map(async tf=>{try{ctx[tf]=await fetchKlineData(sym,tf,true);}catch(e){ctx[tf]=null;}}));if(sel!==reqSym)return;render(sym,main,ctx);setRefreshState('ok');}catch(e){if(sel===reqSym){setRefreshState('fail');if(showLoading){document.getElementById('center').innerHTML=`<div class="placeholder"><div class="icon">❌</div><p>数据获取失败，请稍后刷新。</p></div>`;document.getElementById('right').innerHTML=`<div class="msec"><div class="mtitle">数据状态</div><div class="mrow"><span class="ml">状态</span><span class="mv down">获取失败</span></div><div class="mrow"><span class="ml">说明</span><span class="mv">请稍后刷新</span></div></div>`;}}}finally{isKlineLoading=false;}}
+function setRefreshState(s){const b=document.getElementById('refreshBtn');if(!b)return;b.textContent=s==='loading'?'刷新中':s==='fail'?'失败':'↻';b.style.opacity=s==='loading'?'.6':'1';}
+function refreshSelected(){if(!sel)return;const last=refreshSelected.last||0;if(Date.now()-last>=10000){refreshSelected.last=Date.now();loadKline(sel,false);}}
+function refreshApp(){if(sel){Object.keys(kCache).forEach(k=>{if(k.startsWith(sel+'|')){delete kCache[k];delete kCacheTs[k];}});loadKline(sel,false);return;}load();}
 function goHome(pushUrl=true){sel=null;if(pushUrl)history.pushState(null,'','/');activeCat='all';kCache={};kCacheTs={};resetListStructure();toggleMobilePicker('open');renderCats();renderHomeCenter();document.getElementById('right').innerHTML=`<div class="msec" id="rightPlaceholder"><div class="mtitle">📊 市场面板</div><div class="mrow"><span class="ml">状态</span><span class="mv">实时总览</span></div><div class="mrow"><span class="ml">说明</span><span class="mv">点击中间或左侧合约</span></div></div><div id="newsSection"></div>`;renderNewsPanel();load();}
 function toggleTheme(){const r=document.documentElement;const b=document.getElementById('themeBtn');const isDark=r.getAttribute('data-theme')==='light';r.setAttribute('data-theme',isDark?'dark':'light');b.textContent=isDark?'🌙':'☀️';}
 window.addEventListener('popstate',()=>{const s=symbolFromUrl();if(s)pick(s,'route',false);else goHome(false);});
@@ -521,37 +522,40 @@ const recent=D.slice(Math.max(0,n-80)),support=Math.min(bl[lst]||price,...recent
 const atrNow=atr[lst]||price*0.015,atrPct=atrNow/price*100,volatility=(hi-lo)/price*100,upd=new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
 function trendOf(rawSet){if(!rawSet||rawSet.length<80)return'insufficient';const X=rawSet.map(k=>({time:+k[0],close:+k[2]})).sort((a,b)=>a.time-b.time),c=X.map(x=>x.close),m=c.length;function em(arr,pv){const r=Array(m).fill(NaN);if(m<pv)return r;const q=2/(pv+1);r[pv-1]=arr.slice(0,pv).reduce((a,b)=>a+b,0)/pv;for(let i=pv;i<m;i++)r[i]=(arr[i]-r[i-1])*q+r[i-1];return r;}const a20=em(c,20),a50=em(c,50),a200=em(c,200),i=m-1;if(m>=200&&c[i]>a20[i]&&a20[i]>a50[i]&&a50[i]>a200[i])return'bullish';if(m>=200&&c[i]<a20[i]&&a20[i]<a50[i]&&a50[i]<a200[i])return'bearish';if(c[i]>a50[i]&&a20[i]>a50[i])return'bullish';if(c[i]<a50[i]&&a20[i]<a50[i])return'bearish';return'sideways';}
 const mtf={m15:trendOf(ctx['15min']),m30:trendOf(ctx['30min']),h1:trendOf(ctx['1hour']),h4:trendOf(ctx['4hour'])};
-const longAligned=mtf.h4==='bullish'&&mtf.h1==='bullish'&&!['bearish'].includes(mtf.m15)&&!['bearish'].includes(mtf.m30);
-const shortAligned=mtf.h4==='bearish'&&mtf.h1==='bearish'&&!['bullish'].includes(mtf.m15)&&!['bullish'].includes(mtf.m30);
-const conflict=(!longAligned&&!shortAligned)||(mtf.h4==='bullish'&&mtf.h1==='bearish')||(mtf.h4==='bearish'&&mtf.h1==='bullish');
-const side=longAligned?1:shortAligned?-1:0,trend=side>0?'bullish':side<0?'bearish':'neutral',bull=[],bear=[],wait=[],qtxt=v=>`${v>0?'+':''}${v.toFixed(0)}`;
-const trendScore=side?((side>0&&price>e20[lst]&&e20[lst]>e50[lst])||(side<0&&price<e20[lst]&&e20[lst]<e50[lst])?25:18):8;
-let momentumScore=0;if(side>0)momentumScore+=(rsi>=45&&rsi<=65?8:rsi>65?3:2)+(macdH[lst]>macdH[lst-1]?7:2)+(macdH[lst]>0?5:0);else if(side<0)momentumScore+=(rsi>=35&&rsi<=55?8:rsi<35?3:2)+(macdH[lst]<macdH[lst-1]?7:2)+(macdH[lst]<0?5:0);else momentumScore=6;
-const volumeScore=vr[lst]>=1.2?15:vr[lst]>=0.85?9:4;
-const volatilityScore=atrPct>5?3:atrPct>3?8:atrPct>0.15?15:9;
+const tfVote=t=>t==='bullish'?1:t==='bearish'?-1:0,currentVote=price>e20[lst]&&e20[lst]>e50[lst]?1:price<e20[lst]&&e20[lst]<e50[lst]?-1:0;
+const mainVote=tfVote(mtf.h4)*2+tfVote(mtf.h1)*2+tfVote(mtf.m30)+tfVote(mtf.m15)+currentVote;
+const side=mainVote>0?1:mainVote<0?-1:0,trend=side>0?'bullish':side<0?'bearish':'neutral',bull=[],bear=[],wait=[],qtxt=v=>`${v>0?'+':''}${v.toFixed(0)}`;
+const conflict=(tfVote(mtf.h4)&&tfVote(mtf.h1)&&tfVote(mtf.h4)!==tfVote(mtf.h1))||(tfVote(mtf.m30)&&tfVote(mtf.m15)&&tfVote(mtf.m30)!==tfVote(mtf.m15));
+const trendScore=side?clamp(12+Math.abs(mainVote)*3+(side===currentVote?4:0)+(side>0&&price>e50[lst]||side<0&&price<e50[lst]?3:0),0,25):8;
+const rsiGood=side>0?(rsi>=42&&rsi<=68):(rsi>=32&&rsi<=58),macdGood=side>0?macdH[lst]>=macdH[lst-1]:macdH[lst]<=macdH[lst-1],macdDir=side>0?macdH[lst]>0:macdH[lst]<0;
+const momentumScore=side?clamp((rsiGood?8:4)+(macdGood?7:2)+(macdDir?5:1),0,20):6;
+const volumeScore=vr[lst]>=1.2?15:vr[lst]>=0.85?10:vr[lst]>=0.55?6:3;
+const volatilityScore=atrPct>6?4:atrPct>3?9:atrPct>0.12?15:8;
 const rangePos=(price-support)/(resistance-support+1e-10),middleRange=rangePos>0.38&&rangePos<0.62;
-const srScore=side>0?(rangePos<0.45?15:rangePos<0.65?8:3):side<0?(rangePos>0.55?15:rangePos>0.35?8:3):5;
-const mtfScore=(longAligned||shortAligned)?10:0,totalScore=clamp(trendScore+momentumScore+volumeScore+volatilityScore+srScore+mtfScore,0,100),quantScore=side*totalScore,sc=totalScore/10;
-if(side>0)bull.push(`多周期共振：4h 与 1h 偏多，15m/30m 未明显反向`);else if(side<0)bear.push(`多周期共振：4h 与 1h 偏空，15m/30m 未明显反向`);else wait.push('多周期方向不一致，不能用小周期信号对抗大周期');
-bull.push(`趋势分 ${trendScore}/25：价格与 EMA20/50/200 的相对位置已纳入判断`);
-(momentumScore>=10?bull:bear).push(`动量分 ${momentumScore}/20：RSI ${rsi.toFixed(1)}，MACD柱 ${!isNaN(macdH[lst])?macdH[lst].toFixed(2):'-'}`);
-(volumeScore>=9?bull:bear).push(`成交量分 ${volumeScore}/15：量比 ${vr[lst].toFixed(1)}x`);
-if(conflict)wait.push('4h、1h、30m、15m 至少一个关键周期冲突');
-if(middleRange)wait.push('价格处于支撑压力区间中部，入场优势不足');
-if(volumeScore<9)wait.push('成交量低于 20 根均量要求');
-if(atrPct>5)wait.push('ATR 波动异常，容易扫止损');
+const srScore=side>0?(rangePos<0.55?15:rangePos<0.72?10:5):side<0?(rangePos>0.45?15:rangePos>0.28?10:5):5;
+const mtfScore=clamp(Math.abs(mainVote)*1.7+(conflict?-3:0),0,10),totalScore=clamp(trendScore+momentumScore+volumeScore+volatilityScore+srScore+mtfScore,0,100),quantScore=side*totalScore,sc=totalScore/10;
+if(side>0)bull.push(`主趋势偏多：多周期加权票数 ${mainVote}`);else if(side<0)bear.push(`主趋势偏空：多周期加权票数 ${mainVote}`);else wait.push('多周期方向不清晰，主趋势暂未形成');
+bull.push(`趋势分 ${trendScore}/25：价格、EMA20/50 与 4h/1h 权重已计入`);
+(momentumScore>=12?bull:bear).push(`动量分 ${momentumScore}/20：RSI ${rsi.toFixed(1)}，MACD柱 ${!isNaN(macdH[lst])?macdH[lst].toFixed(2):'-'}`);
+(volumeScore>=10?bull:bear).push(`成交量分 ${volumeScore}/15：量比 ${vr[lst].toFixed(1)}x`);
+if(conflict)wait.push('多周期冲突');
+if(middleRange)wait.push('价格在震荡区间中间');
+if(volumeScore<10)wait.push('成交量不足');
+if(atrPct>6)wait.push('ATR 波动异常，容易扫止损');
 let act='观望',dir='观望',cls='neutral',entryLow=null,entryHigh=null,stop=null,firstTp=null,secondTp=null,rr=0;
 if(side>0){entryLow=price-atrNow*0.25;entryHigh=price+atrNow*0.15;stop=Math.min(price-atrNow*1.6,support*0.995);const risk=Math.max(((entryLow+entryHigh)/2)-stop,price*0.002);firstTp=((entryLow+entryHigh)/2)+risk*1.6;secondTp=((entryLow+entryHigh)/2)+risk*2.4;rr=(firstTp-((entryLow+entryHigh)/2))/risk;}
 if(side<0){entryLow=price-atrNow*0.15;entryHigh=price+atrNow*0.25;stop=Math.max(price+atrNow*1.6,resistance*1.005);const risk=Math.max(stop-((entryLow+entryHigh)/2),price*0.002);firstTp=((entryLow+entryHigh)/2)-risk*1.6;secondTp=((entryLow+entryHigh)/2)-risk*2.4;rr=(((entryLow+entryHigh)/2)-firstTp)/risk;}
-if(totalScore<70)wait.push(`策略评分 ${totalScore}/100 低于 70，按规则观望`);
+if(totalScore<65)wait.push(`策略评分 ${totalScore}/100 低于 65`);
 if(rr&&rr<1.5)wait.push(`盈亏比 ${rr.toFixed(1)} 低于 1:1.5`);
 if(!stop||!firstTp||!secondTp)wait.push('交易计划缺少完整止损/止盈');
-if(!wait.length&&side>0){act='做多';dir=totalScore>=85?'强烈看多':'看多';cls='bull';}
-else if(!wait.length&&side<0){act='做空';dir=totalScore>=85?'强烈看空':'看空';cls='bear';}
+if(side>0&&totalScore>=75&&rr>=1.5){act='做多';dir=totalScore>=85?'强烈看多':'看多';cls='bull';}
+else if(side<0&&totalScore>=75&&rr>=1.5){act='做空';dir=totalScore>=85?'强烈看空':'看空';cls='bear';}
+else if(side>0&&totalScore>=65){dir='偏多观察';cls='neutral';}
+else if(side<0&&totalScore>=65){dir='偏空观察';cls='neutral';}
 else{entryLow=bl[lst];entryHigh=bu[lst];stop=null;firstTp=null;secondTp=null;rr=0;}
 const hl=ch24>=0?'up':'down',conf=totalScore/100;
-let longProb=side>0&&!wait.length?clamp(Math.round(42+totalScore*0.52),5,88):side<0?clamp(Math.round(20-totalScore*0.08),5,35):clamp(Math.round(28+Math.max(0,quantScore)*0.12),8,42);
-let shortProb=side<0&&!wait.length?clamp(Math.round(42+totalScore*0.52),5,88):side>0?clamp(Math.round(20-totalScore*0.08),5,35):clamp(Math.round(28+Math.max(0,-quantScore)*0.12),8,42);
+let longProb=side>0&&act==='做多'?clamp(Math.round(42+totalScore*0.52),5,88):side<0?clamp(Math.round(20-totalScore*0.08),5,35):clamp(Math.round(28+Math.max(0,quantScore)*0.12),8,42);
+let shortProb=side<0&&act==='做空'?clamp(Math.round(42+totalScore*0.52),5,88):side>0?clamp(Math.round(20-totalScore*0.08),5,35):clamp(Math.round(28+Math.max(0,-quantScore)*0.12),8,42);
 let waitProb=clamp(100-longProb-shortProb,8,86);if(act==='观望'){waitProb=clamp(Math.max(waitProb,58),58,90);const remain=100-waitProb;longProb=Math.round(remain*(side>=0?0.55:0.45));shortProb=remain-longProb;}
 const entryTxt=act==='观望'?`等待突破 $${fmt(resistance)} 或跌破 $${fmt(support)} 后重新评估`:`$${fmt(entryLow)} - $${fmt(entryHigh)}`;
 const posTxt=act==='观望'?'0% - 10%，只做观察仓':atrPct>3?'10% - 15%，波动偏大':'15% - 25%，分批执行';
