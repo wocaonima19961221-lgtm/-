@@ -215,20 +215,20 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:
   .nav-btn{padding:6px 10px;font-size:12px;}
   .tabs{position:fixed;top:54px;left:0;right:0;z-index:160;padding:0 12px;overflow-x:auto;}
   .tab{padding:10px 12px;font-size:12px;white-space:nowrap;}
-  .layout{display:flex;flex-direction:column;height:auto;min-height:calc(100vh - 136px);overflow:visible;padding-top:136px;}
-  .left{order:1;border-right:0;border-top:0;border-bottom:0;max-height:none;height:0;overflow:visible;position:relative;padding-top:0;background:var(--bg2);}
+  .layout{display:flex;flex-direction:column;height:auto;min-height:calc(100vh - 136px);overflow:visible;padding-top:94px;}
+  .left{order:1;border-right:0;border-top:0;border-bottom:1px solid var(--border);max-height:none;height:auto;overflow:visible;position:static;padding-top:0;background:var(--bg2);}
   .center{order:2;padding:12px;background:var(--bg);overflow:visible;}
   .right{order:3;border-left:0;border-top:1px solid var(--border);padding:12px;overflow:visible;}
   .center::before,.right::before{display:block;padding:10px 12px 8px;color:var(--text);font-size:13px;font-weight:800;letter-spacing:0;border-bottom:1px solid var(--border);background:var(--bg2);}
   .center::before{content:"2 分析推荐 / 交易方向";margin:-12px -12px 12px;}
   .right::before{content:"3 快讯与市场情绪";margin:-12px -12px 12px;}
   .right #rightPlaceholder{display:none;}
-  .mobile-picker-head{position:fixed;top:94px;left:0;right:0;z-index:140;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px 8px;color:var(--text);border-bottom:1px solid var(--border);background:var(--bg2);box-shadow:var(--shadow);}
+  .mobile-picker-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px 8px;color:var(--text);border-bottom:1px solid var(--border);background:var(--bg2);box-shadow:none;}
   .mobile-picker-title{font-size:13px;font-weight:800;white-space:nowrap;}
   .mobile-picker-toggle{display:inline-flex;align-items:center;gap:6px;max-width:55%;padding:4px 9px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--text);font-size:11px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .mobile-picker-toggle span{color:var(--text2);font-weight:700;overflow:hidden;text-overflow:ellipsis;}
-  .left:not(.mobile-collapsed){position:fixed;top:94px;left:0;right:0;z-index:130;max-height:72vh;overflow-y:auto;padding-top:42px;box-shadow:var(--shadow);}
-  .left.mobile-collapsed{height:0;}
+  .left:not(.mobile-collapsed){position:static;max-height:none;overflow:visible;padding-top:0;box-shadow:none;}
+  .left.mobile-collapsed{height:auto;}
   .left.mobile-collapsed .search-wrap,.left.mobile-collapsed .cats,.left.mobile-collapsed .sort-bar,.left.mobile-collapsed .list-header,.left.mobile-collapsed .coin-list{display:none;}
   .left .search-wrap{padding:10px 12px 8px;}
   .cats,.sort-bar{padding-left:12px;padding-right:12px;overflow-x:auto;flex-wrap:nowrap;}
@@ -423,8 +423,9 @@ function renderNewsPanel(){const el=document.getElementById('newsSection');if(!e
 }
 async function loadNews(){renderNewsPanel();try{const r=await fetch('/api/news');const d=await r.json();newsCache=d.news||[];renderNewsPanel();}catch(e){const el=document.getElementById('newsSection');if(el)el.innerHTML='<div class="news-card"><div class="news-head"><div class="news-title">📰 7×24 小时快讯</div><div class="news-live">实时</div></div><div class="news-empty">快讯暂时不可用，稍后自动刷新。</div></div>';}}
 // ====== Load ======
-async function load(){if(isContractsLoading)return;isContractsLoading=true;renderCats();try{const r=await fetch(`/api/contracts?limit=1000&_=${Date.now()}`,{cache:'no-store'});const d=await r.json();allC=d.contracts;doFilter();}catch(e){console.error(e);}finally{isContractsLoading=false;}}
-function renderCats(){document.getElementById('cats').innerHTML=CATS.map(c=>`<button class="cat${c.id===activeCat?' active':''}" onclick="switchCat('${c.id}')">${c.i} ${c.l}</button>`).join('');renderSortBar();}
+async function load(){if(isContractsLoading)return;isContractsLoading=true;renderCats();try{const r=await fetch(`/api/contracts?limit=1000&_=${Date.now()}`,{cache:'no-store'});const d=await r.json();allC=d.contracts;renderCats();doFilter();}catch(e){console.error(e);}finally{isContractsLoading=false;}}
+function catCounts(){const counts={all:allC.length};allC.forEach(c=>{const id=getCat(c).id;counts[id]=(counts[id]||0)+1;});return counts;}
+function renderCats(){const counts=catCounts();if(activeCat!=='all'&&allC.length&&!(counts[activeCat]>0)){activeCat='all';resetListStructure();}document.getElementById('cats').innerHTML=CATS.filter(c=>c.id==='all'||!allC.length||counts[c.id]>0).map(c=>`<button class="cat${c.id===activeCat?' active':''}" onclick="switchCat('${c.id}')">${c.i} ${c.l}${allC.length&&c.id!=='all'?` ${counts[c.id]}`:''}</button>`).join('');renderSortBar();}
 function renderSortBar(){const b=document.getElementById('sortBar');b.innerHTML=`<button class="sort-btn${sortBy==='vol'?' active':''}" onclick="setSort('vol')">📊 成交额</button><button class="sort-btn${sortBy==='gain'||sortBy==='loss'?' active':''}" onclick="cycleSort()">${sortBy==='gain'?'🔥 涨幅 ↓':sortBy==='loss'?'📉 跌幅 ↓':'🔥 涨跌幅'}</button>`;}
 function resetListStructure(){lastListKey='';renderedSymbols=[];}
 function setSort(s){sortBy=s;resetListStructure();renderSortBar();doFilter();}
@@ -432,7 +433,7 @@ function cycleSort(){sortBy=sortBy==='gain'?'loss':'gain';resetListStructure();r
 function switchCat(id){activeCat=id;resetListStructure();renderCats();doFilter();}
 function doSearch(){resetListStructure();doFilter();}
 function isMobileView(){return window.matchMedia('(max-width: 900px)').matches;}
-function scrollToMobileAnalysis(){if(isMobileView()){setTimeout(()=>{const el=document.getElementById('center');if(!el)return;const y=el.getBoundingClientRect().top+window.scrollY-136;window.scrollTo(0,Math.max(0,y));},120);}}
+function scrollToMobileAnalysis(){if(isMobileView()){setTimeout(()=>{const el=document.getElementById('center');if(!el)return;const y=el.getBoundingClientRect().top+window.scrollY-12;window.scrollTo(0,Math.max(0,y));},120);}}
 function updateMobilePickerToggle(){const btn=document.getElementById('mobilePickerToggle'),left=document.getElementById('leftPanel');if(!btn||!left)return;const picked=sel?sel.replace('-USDT','/USDT'):'未选择';const action=left.classList.contains('mobile-collapsed')?'展开':'收起';btn.innerHTML=`${action} <span>${picked}</span>`;}
 function toggleMobilePicker(force){const left=document.getElementById('leftPanel');if(!left)return;if(force==='open')left.classList.remove('mobile-collapsed');else if(force==='close')left.classList.add('mobile-collapsed');else left.classList.toggle('mobile-collapsed');updateMobilePickerToggle();}
 function doFilter(){let f=allC;if(activeCat!=='all'){f=f.filter(c=>getCat(c).id===activeCat);}
