@@ -368,7 +368,7 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:
 <body>
 <div class="nav">
   <div class="nav-l" style="flex:1;text-align:center;"><div class="nav-logo" onclick="goHome()" style="display:inline-block;font-size:24px;">📡 CryptoIntel</div></div>
-  <div class="nav-r" style="position:absolute;right:28px;display:flex;gap:8px;align-items:center;"><button class="nav-btn ghost" onclick="location.reload()" id="refreshBtn" style="padding:6px 10px;transition:opacity 0.15s;">↻</button><button class="nav-btn ghost" onclick="toggleTheme()" id="themeBtn">🌙</button></div>
+  <div class="nav-r" style="position:absolute;right:28px;display:flex;gap:8px;align-items:center;"><button class="nav-btn ghost" onclick="refreshApp()" id="refreshBtn" style="padding:6px 10px;transition:opacity 0.15s;">↻</button><button class="nav-btn ghost" onclick="toggleTheme()" id="themeBtn">🌙</button></div>
 </div>
 <div class="tabs"><div class="tab active">📊 分析预测</div></div>
 <div class="layout">
@@ -411,7 +411,7 @@ if(v>=5e5)return{i:'🪙',id:'alt'};return{i:'🔹',id:'micro'};}
 const CATS=[{i:'📋',l:'全部',id:'all'},{i:'🇺🇸',l:'美股永续',id:'stock'},{i:'💎',l:'主流',id:'major'},{i:'🤑',l:'Meme',id:'meme'},{i:'🪙',l:'山寨',id:'alt'},{i:'🔹',l:'微型',id:'micro'}];
 const KLINE_TYPES=[['1min','1m'],['5min','5m'],['15min','15m'],['30min','30m'],['1hour','1h'],['4hour','4h'],['1day','1D']];
 const MTF_TYPES=['15min','30min','1hour','4hour'];
-let activeCat='all',sortBy='vol',allC=[],sel=null,kCache={},kCacheTs={},newsCache=[],isKlineLoading=false,isContractsLoading=false,homeRanks=null,homeRanksTs=0,lastListKey='',renderedSymbols=[],activeTf='1min';
+let activeCat='all',sortBy='vol',allC=[],sel=null,kCache={},kCacheTs={},newsCache=[],isKlineLoading=false,isContractsLoading=false,homeRanks=null,homeRanksTs=0,lastListKey='',renderedSymbols=[],activeTf='1min',routeApplied=false;
 function fmt(p){if(p==null)return'-';if(p>=1000)return Number(p).toLocaleString('en-US',{minFD:2,maxFD:2});return Number(p).toFixed(p<1?6:2);}
 function fmtV(v){if(!v)return'-';if(v>=1e9)return(v/1e9).toFixed(1)+'B';if(v>=1e6)return(v/1e6).toFixed(1)+'M';return v.toFixed(0);}
 function esc(s){return String(s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
@@ -424,7 +424,10 @@ function renderNewsPanel(){const el=document.getElementById('newsSection');if(!e
 }
 async function loadNews(){renderNewsPanel();try{const r=await fetch('/api/news');const d=await r.json();newsCache=d.news||[];renderNewsPanel();}catch(e){const el=document.getElementById('newsSection');if(el)el.innerHTML='<div class="news-card"><div class="news-head"><div class="news-title">📰 7×24 小时快讯</div><div class="news-live">实时</div></div><div class="news-empty">快讯暂时不可用，稍后自动刷新。</div></div>';}}
 // ====== Load ======
-async function load(){if(isContractsLoading)return;isContractsLoading=true;renderCats();try{const r=await fetch(`/api/contracts?limit=1000&_=${Date.now()}`,{cache:'no-store'});const d=await r.json();allC=d.contracts;renderCats();doFilter();}catch(e){console.error(e);}finally{isContractsLoading=false;}}
+async function load(){if(isContractsLoading)return;isContractsLoading=true;renderCats();try{const r=await fetch(`/api/contracts?limit=1000&_=${Date.now()}`,{cache:'no-store'});const d=await r.json();allC=d.contracts;renderCats();if(!routeApplied){routeApplied=true;const s=symbolFromUrl();if(s){await pick(s,'route',false);return;}}doFilter();}catch(e){console.error(e);}finally{isContractsLoading=false;}}
+function normalizeSymbol(s){const b=String(s||'').toUpperCase().replace(/[^A-Z0-9]/g,'').replace(/USDT$/,'');return b?`${b}-USDT`:'';}
+function symbolFromUrl(){const u=new URL(location.href),q=u.searchParams.get('symbol');if(q)return normalizeSymbol(q);const m=u.pathname.match(/^\/analysis\/([^/]+)/);return m?normalizeSymbol(m[1]):'';}
+function setAnalysisUrl(sym){history.pushState(null,'',`/analysis/${sym.replace('-USDT','USDT')}`);}
 function catCounts(){const counts={all:allC.length};allC.forEach(c=>{const id=getCat(c).id;counts[id]=(counts[id]||0)+1;});return counts;}
 function renderCats(){const counts=catCounts();if(activeCat!=='all'&&allC.length&&!(counts[activeCat]>0)){activeCat='all';resetListStructure();}document.getElementById('cats').innerHTML=CATS.filter(c=>c.id==='all'||!allC.length||counts[c.id]>0).map(c=>`<button class="cat${c.id===activeCat?' active':''}" onclick="switchCat('${c.id}')">${c.i} ${c.l}${allC.length&&c.id!=='all'?` ${counts[c.id]}`:''}</button>`).join('');renderSortBar();}
 function renderSortBar(){const b=document.getElementById('sortBar');b.innerHTML=`<button class="sort-btn${sortBy==='vol'?' active':''}" onclick="setSort('vol')">📊 成交额</button><button class="sort-btn${sortBy==='gain'||sortBy==='loss'?' active':''}" onclick="cycleSort()">${sortBy==='gain'?'🔥 涨幅 ↓':sortBy==='loss'?'📉 跌幅 ↓':'🔥 涨跌幅'}</button>`;}
@@ -489,15 +492,17 @@ el.innerHTML=`<div class="home-dash">
   </div>
 </div>`;}
 // ====== Pick ======
-async function pick(sym,source=''){sel=sym;doFilter();if(isMobileView())toggleMobilePicker('close');await loadKline(sym,true);if(source==='list')scrollToMobileAnalysis();}
+async function pick(sym,source='',pushUrl=true){sym=normalizeSymbol(sym);if(!sym)return;sel=sym;if(pushUrl)setAnalysisUrl(sym);doFilter();if(isMobileView())toggleMobilePicker('close');await loadKline(sym,true);if(source==='list')scrollToMobileAnalysis();}
 function setTimeframe(tf){if(activeTf===tf)return;activeTf=tf;if(sel)loadKline(sel,true);}
 async function fetchKlineData(sym,tf,fresh=false){const key=sym+'|'+tf,now=Date.now(),ttl=tf===activeTf?900:30000;if(!fresh&&kCache[key]&&now-(kCacheTs[key]||0)<ttl)return kCache[key];const r=await fetch(`/api/kline/${sym}?type=${tf}&_=${now}`,{cache:'no-store'});const d=await r.json();if(d.code!=='200000'||!d.data)throw new Error('K线获取失败');kCache[key]=d.data;kCacheTs[key]=now;return d.data;}
 async function loadKline(sym,showLoading=false){if(isKlineLoading)return;isKlineLoading=true;const reqSym=sym;
 if(showLoading){document.getElementById('center').innerHTML=`<div class="loading"><div class="spinner"></div><span>加载 ${sym.replace('-USDT','')} 数据...</span></div>`;document.getElementById('right').innerHTML=`<div class="loading"><div class="spinner"></div><span>加载指标...</span></div>`;}
 try{const main=await fetchKlineData(sym,activeTf,true);const ctx={[activeTf]:main};await Promise.all(MTF_TYPES.map(async tf=>{try{ctx[tf]=await fetchKlineData(sym,tf,false);}catch(e){ctx[tf]=null;}}));if(sel!==reqSym)return;render(sym,main,ctx);}catch(e){if(sel===reqSym){document.getElementById('center').innerHTML=`<div class="placeholder"><div class="icon">❌</div><p>数据获取失败，请稍后刷新。</p></div>`;document.getElementById('right').innerHTML=`<div class="msec"><div class="mtitle">数据状态</div><div class="mrow"><span class="ml">状态</span><span class="mv down">获取失败</span></div><div class="mrow"><span class="ml">说明</span><span class="mv">请稍后刷新</span></div></div>`;}}finally{isKlineLoading=false;}}
 function refreshSelected(){if(!sel)return;const fast=activeTf==='1min'||activeTf==='5min';const last=refreshSelected.last||0;if(fast||Date.now()-last>10000){refreshSelected.last=Date.now();loadKline(sel,false);}}
-function goHome(){sel=null;activeCat='all';kCache={};kCacheTs={};resetListStructure();toggleMobilePicker('open');renderCats();renderHomeCenter();document.getElementById('right').innerHTML=`<div class="msec" id="rightPlaceholder"><div class="mtitle">📊 市场面板</div><div class="mrow"><span class="ml">状态</span><span class="mv">实时总览</span></div><div class="mrow"><span class="ml">说明</span><span class="mv">点击中间或左侧合约</span></div></div><div id="newsSection"></div>`;renderNewsPanel();load();}
+function refreshApp(){if(sel){Object.keys(kCache).forEach(k=>{if(k.startsWith(sel+'|')){delete kCache[k];delete kCacheTs[k];}});loadKline(sel,true);return;}load();}
+function goHome(pushUrl=true){sel=null;if(pushUrl)history.pushState(null,'','/');activeCat='all';kCache={};kCacheTs={};resetListStructure();toggleMobilePicker('open');renderCats();renderHomeCenter();document.getElementById('right').innerHTML=`<div class="msec" id="rightPlaceholder"><div class="mtitle">📊 市场面板</div><div class="mrow"><span class="ml">状态</span><span class="mv">实时总览</span></div><div class="mrow"><span class="ml">说明</span><span class="mv">点击中间或左侧合约</span></div></div><div id="newsSection"></div>`;renderNewsPanel();load();}
 function toggleTheme(){const r=document.documentElement;const b=document.getElementById('themeBtn');const isDark=r.getAttribute('data-theme')==='light';r.setAttribute('data-theme',isDark?'dark':'light');b.textContent=isDark?'🌙':'☀️';}
+window.addEventListener('popstate',()=>{const s=symbolFromUrl();if(s)pick(s,'route',false);else goHome(false);});
 // ====== Analysis ======
 function render(sym,raw,ctx={}){const D=raw.map(k=>({time:parseInt(k[0]),open:+k[1],close:+k[2],high:+k[3],low:+k[4],volume:+k[5]})).sort((a,b)=>a.time-b.time);const p=D.map(d=>d.close),n=p.length;if(n<80){document.getElementById('center').innerHTML='<div class="placeholder"><p>数据不足，策略输出观望。</p></div>';return;}
 function ema(arr,pv){const r=Array(n).fill(NaN);if(pv>n)return r;const m=2/(pv+1);r[pv-1]=arr.slice(0,pv).reduce((a,b)=>a+b,0)/pv;for(let i=pv;i<n;i++)r[i]=(arr[i]-r[i-1])*m+r[i-1];return r;}

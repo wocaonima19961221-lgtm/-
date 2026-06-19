@@ -266,6 +266,11 @@ else:
 def root():
     return HTMLResponse(HTML)
 
+@app.get("/analysis")
+@app.get("/analysis/{symbol}")
+def analysis(symbol: str = ""):
+    return HTMLResponse(HTML)
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', '8888'))
     print(f"\n  📡 加密市场情报分析\n  http://127.0.0.1:8888\n")
