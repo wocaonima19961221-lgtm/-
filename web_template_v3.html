@@ -50,6 +50,7 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:
 .left .search-wrap input{width:100%;padding:9px 14px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:13px;outline:none;transition:border 0.15s;}
 .left .search-wrap input:focus{border-color:var(--accent);}
 .left .search-wrap input::placeholder{color:var(--text3);}
+.mobile-picker-toggle{display:none;}
 .cats{display:flex;gap:3px;padding:8px 10px 6px;flex-wrap:wrap;border-bottom:1px solid var(--border);}
 .cat{padding:4px 10px;border-radius:5px;font-size:11px;font-weight:500;cursor:pointer;background:var(--card);color:var(--text2);border:none;transition:all 0.12s;}
 .cat:hover{color:var(--text);}
@@ -223,6 +224,10 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:
   .center::before{content:"2 分析推荐 / 交易方向";margin:-12px -12px 12px;}
   .right::before{content:"3 快讯与市场情绪";margin:-12px -12px 12px;}
   .right #rightPlaceholder{display:none;}
+  .mobile-picker-toggle{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;padding:10px 12px;background:var(--card);color:var(--text);border:0;border-bottom:1px solid var(--border);font-size:13px;font-weight:800;text-align:left;}
+  .mobile-picker-toggle span{font-size:11px;color:var(--text2);font-weight:700;}
+  .left.mobile-collapsed{position:sticky;top:94px;z-index:90;box-shadow:var(--shadow);}
+  .left.mobile-collapsed .search-wrap,.left.mobile-collapsed .cats,.left.mobile-collapsed .sort-bar,.left.mobile-collapsed .list-header,.left.mobile-collapsed .coin-list{display:none;}
   .left .search-wrap{padding:10px 12px 8px;}
   .cats,.sort-bar{padding-left:12px;padding-right:12px;overflow-x:auto;flex-wrap:nowrap;}
   .cat,.sort-btn{flex:0 0 auto;}
@@ -259,11 +264,18 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:
   .chart-tools .hint{white-space:normal;text-align:center;}
   .chart-card{padding:6px;}
   .chart-card #chart{height:280px;}
-  .dp-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .center{display:flex;flex-direction:column;}
+  .chart-header{order:1}.price-row{order:2}.stats-row{order:3}.chart-tools{order:4}.chart-card{order:5}.center-fg{order:6}.trade-plan{order:7}.data-panel{order:8}
+  .center-fg{display:flex!important;}
+  .dp-grid{grid-template-columns:repeat(6,minmax(0,1fr));}
   .trade-plan{padding:13px 12px;}
+  .trade-plan-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
   .trade-plan-title{font-size:15px;}
   .trade-plan-price{font-size:19px;}
   .trade-block{padding:11px 10px;}
+  .trade-block:nth-child(3),.trade-block:nth-child(4){display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 10px;align-content:start;}
+  .trade-block:nth-child(3) h3,.trade-block:nth-child(4) h3{grid-column:1 / -1;margin-bottom:4px;}
+  .trade-block:nth-child(3) .trade-line,.trade-block:nth-child(4) .trade-line{grid-template-columns:1fr;gap:2px;padding:2px 0;}
   .trade-line{grid-template-columns:82px minmax(0,1fr);gap:8px;font-size:12px;}
   .prob-row{grid-template-columns:82px minmax(0,1fr) 38px;gap:8px;font-size:12px;}
   .fg-box{margin-bottom:12px;}
@@ -287,7 +299,9 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:
   .rank-item{grid-template-columns:minmax(0,1fr) 66px;}
   .rank-val{font-size:12px;}
   .tf-bar{grid-template-columns:repeat(3,minmax(0,1fr));}
-  .dp-grid{grid-template-columns:1fr;}
+  .dp-grid{grid-template-columns:repeat(3,minmax(0,1fr));}
+  .trade-plan-grid{grid-template-columns:1fr;}
+  .trade-block:nth-child(3),.trade-block:nth-child(4){grid-template-columns:repeat(2,minmax(0,1fr));}
   .trade-line{grid-template-columns:1fr;font-size:12px;gap:2px;}
   .prob-row{grid-template-columns:1fr 42px;gap:6px;}
   .prob-row .label{grid-column:1 / -1;}
@@ -303,6 +317,7 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:
 .fg-box .fg-bar{height:5px;background:var(--border2);border-radius:3px;overflow:hidden;margin:3px 0;}
 .fg-box .fg-bar-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--red),var(--yellow),var(--green));transition:width 0.5s;}
 .fg-box .fg-label{font-size:12px;color:var(--text2);}
+.center-fg{display:none;}
 .msec{margin-bottom:16px;}
 .msec .mtitle{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px;padding-bottom:5px;border-bottom:1px solid var(--border);}
 .mrow{display:flex;justify-content:space-between;padding:4px 0;font-size:12px;}
@@ -355,7 +370,8 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:
 </div>
 <div class="tabs"><div class="tab active">📊 分析预测</div></div>
 <div class="layout">
-  <div class="left">
+  <div class="left" id="leftPanel">
+    <button class="mobile-picker-toggle" id="mobilePickerToggle" onclick="toggleMobilePicker()">选择分类与币种 <span>展开</span></button>
     <div class="search-wrap"><input id="search" placeholder="搜索合约名称或币种..." oninput="doSearch()"></div>
     <div class="cats" id="cats"></div>
     <div class="sort-bar" id="sortBar"></div>
@@ -415,11 +431,13 @@ function switchCat(id){activeCat=id;resetListStructure();renderCats();doFilter()
 function doSearch(){resetListStructure();doFilter();}
 function isMobileView(){return window.matchMedia('(max-width: 900px)').matches;}
 function scrollToMobileAnalysis(){if(isMobileView()){setTimeout(()=>{const el=document.getElementById('center');if(!el)return;const y=el.getBoundingClientRect().top+window.scrollY-6;window.scrollTo(0,y);},120);}}
+function updateMobilePickerToggle(){const btn=document.getElementById('mobilePickerToggle'),left=document.getElementById('leftPanel');if(!btn||!left)return;const picked=sel?sel.replace('-USDT','/USDT'):'未选择';btn.innerHTML=`选择分类与币种 · ${picked} <span>${left.classList.contains('mobile-collapsed')?'展开':'收起'}</span>`;}
+function toggleMobilePicker(force){const left=document.getElementById('leftPanel');if(!left)return;if(force==='open')left.classList.remove('mobile-collapsed');else if(force==='close')left.classList.add('mobile-collapsed');else left.classList.toggle('mobile-collapsed');updateMobilePickerToggle();}
 function doFilter(){let f=allC;if(activeCat!=='all'){f=f.filter(c=>getCat(c).id===activeCat);}
 const q=document.getElementById('search').value.toUpperCase().trim();if(q){const q2=q.replace('USDT','').replace('-','');f=f.filter(c=>{const b=c.symbol.replace('-USDT','');return c.symbol.includes(q2)||b.includes(q2)||cn(c.symbol).toUpperCase().includes(q2);});}
 const listKey=activeCat+'|'+sortBy+'|'+q;if(listKey!==lastListKey||!renderedSymbols.length){if(sortBy==='gain')f.sort((a,b)=>b.change_24h-a.change_24h);else if(sortBy==='loss')f.sort((a,b)=>a.change_24h-b.change_24h);else f.sort((a,b)=>b.turnover_24h-a.turnover_24h);renderList(f);lastListKey=listKey;}else{const bySym=Object.fromEntries(f.map(c=>[c.symbol,c]));updateListValues(renderedSymbols.map(s=>bySym[s]).filter(Boolean));}
 if(!sel)renderHomeCenter();}
-function renderList(arr){renderedSymbols=arr.map(c=>c.symbol);const list=document.getElementById('coinList');if(!arr.length){list.innerHTML=`<div class="placeholder" style="height:auto;padding:28px 14px;"><p>${activeCat==='stock'?'当前网络无法访问 Binance 美股永续':'暂无匹配合约'}</p><div class="sub">${activeCat==='stock'?'接口恢复后会自动显示 TSLA、AAPL、SPY、QQQ 等合约':'换个分类或搜索词试试'}</div></div>`;return;}list.innerHTML=arr.map(c=>{const a=c.symbol===sel?' active':'';const ch=c.change_24h;const b=c.symbol.replace('-USDT','');const nm=cn(c.symbol);const im=iconHtml(c.symbol,'coin-badge-sm');return`<div class="coin-row${a}" data-symbol="${c.symbol}" onclick="pick('${c.symbol}','list')"><div class="name">${im}${b}${nm?`<span class="cn">${nm}</span>`:''}</div><div class="prc">${fmt(c.price)}</div><div class="chg${ch>0?' up':' down'}">${ch>0?'+':''}${ch}%</div></div>`;}).join('');}
+function renderList(arr){renderedSymbols=arr.map(c=>c.symbol);const list=document.getElementById('coinList');updateMobilePickerToggle();if(!arr.length){list.innerHTML=`<div class="placeholder" style="height:auto;padding:28px 14px;"><p>${activeCat==='stock'?'当前网络无法访问 Binance 美股永续':'暂无匹配合约'}</p><div class="sub">${activeCat==='stock'?'接口恢复后会自动显示 TSLA、AAPL、SPY、QQQ 等合约':'换个分类或搜索词试试'}</div></div>`;return;}list.innerHTML=arr.map(c=>{const a=c.symbol===sel?' active':'';const ch=c.change_24h;const b=c.symbol.replace('-USDT','');const nm=cn(c.symbol);const im=iconHtml(c.symbol,'coin-badge-sm');return`<div class="coin-row${a}" data-symbol="${c.symbol}" onclick="pick('${c.symbol}','list')"><div class="name">${im}${b}${nm?`<span class="cn">${nm}</span>`:''}</div><div class="prc">${fmt(c.price)}</div><div class="chg${ch>0?' up':' down'}">${ch>0?'+':''}${ch}%</div></div>`;}).join('');}
 function updateListValues(arr){arr.forEach(c=>{const row=document.querySelector(`.coin-row[data-symbol="${c.symbol}"]`);if(!row)return;const ch=c.change_24h;row.classList.toggle('active',c.symbol===sel);const p=row.querySelector('.prc');const cg=row.querySelector('.chg');if(p)p.textContent=fmt(c.price);if(cg){cg.className='chg'+(ch>0?' up':' down');cg.textContent=(ch>0?'+':'')+ch+'%';}});}
 function renderHomeCenter(){const el=document.getElementById('center');if(!el)return;if(!allC.length){el.innerHTML=`<div class="loading"><div class="spinner"></div><span>加载实时市场...</span></div>`;return;}
 const now=new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
@@ -467,13 +485,13 @@ el.innerHTML=`<div class="home-dash">
   </div>
 </div>`;}
 // ====== Pick ======
-async function pick(sym,source=''){sel=sym;doFilter();await loadKline(sym,true);if(source==='list')scrollToMobileAnalysis();}
+async function pick(sym,source=''){sel=sym;doFilter();if(isMobileView())toggleMobilePicker('close');await loadKline(sym,true);if(source==='list')scrollToMobileAnalysis();}
 function setTimeframe(tf){if(activeTf===tf)return;activeTf=tf;if(sel)loadKline(sel,true);}
 async function loadKline(sym,showLoading=false){if(isKlineLoading)return;isKlineLoading=true;const reqSym=sym;
 if(showLoading){document.getElementById('center').innerHTML=`<div class="loading"><div class="spinner"></div><span>加载 ${sym.replace('-USDT','')} 数据...</span></div>`;document.getElementById('right').innerHTML=`<div class="loading"><div class="spinner"></div><span>加载指标...</span></div>`;}
 try{const r=await fetch(`/api/kline/${sym}?type=${activeTf}&_=${Date.now()}`,{cache:'no-store'});const d=await r.json();if(d.code!=='200000'||!d.data)throw new Error('K线获取失败');if(sel!==reqSym)return;kCache[sym+'|'+activeTf]=d.data;render(sym,d.data);}catch(e){if(showLoading&&sel===reqSym)document.getElementById('center').innerHTML=`<div class="placeholder"><div class="icon">❌</div><p>${e.message||'加载失败'}</p></div>`;}finally{isKlineLoading=false;}}
 function refreshSelected(){if(!sel)return;const fast=activeTf==='1min'||activeTf==='5min';const last=refreshSelected.last||0;if(fast||Date.now()-last>10000){refreshSelected.last=Date.now();loadKline(sel,false);}}
-function goHome(){sel=null;activeCat='all';kCache={};resetListStructure();renderCats();renderHomeCenter();document.getElementById('right').innerHTML=`<div class="msec" id="rightPlaceholder"><div class="mtitle">📊 市场面板</div><div class="mrow"><span class="ml">状态</span><span class="mv">实时总览</span></div><div class="mrow"><span class="ml">说明</span><span class="mv">点击中间或左侧合约</span></div></div><div id="newsSection"></div>`;renderNewsPanel();load();}
+function goHome(){sel=null;activeCat='all';kCache={};resetListStructure();toggleMobilePicker('open');renderCats();renderHomeCenter();document.getElementById('right').innerHTML=`<div class="msec" id="rightPlaceholder"><div class="mtitle">📊 市场面板</div><div class="mrow"><span class="ml">状态</span><span class="mv">实时总览</span></div><div class="mrow"><span class="ml">说明</span><span class="mv">点击中间或左侧合约</span></div></div><div id="newsSection"></div>`;renderNewsPanel();load();}
 function toggleTheme(){const r=document.documentElement;const b=document.getElementById('themeBtn');const isDark=r.getAttribute('data-theme')==='light';r.setAttribute('data-theme',isDark?'dark':'light');b.textContent=isDark?'🌙':'☀️';}
 // ====== Analysis ======
 function render(sym,raw){const D=raw.map(k=>({time:parseInt(k[0])/1000,open:+k[1],close:+k[2],high:+k[3],low:+k[4],volume:+k[5]})).sort((a,b)=>a.time-b.time);const p=D.map(d=>d.close),n=p.length;if(n<50){document.getElementById('center').innerHTML='<div class="placeholder"><p>数据不足</p></div>';return;}
@@ -523,6 +541,7 @@ document.getElementById('center').innerHTML=`
 <div class="stats-row"><span class="stat">当前 <strong>$${fmt(price)}</strong></span><span class="stat">24h高 <strong>$${fmt(hi)}</strong></span><span class="stat">24h低 <strong>$${fmt(lo)}</strong></span><span class="stat">24h量 <strong>${fmtV(D.reduce((s,d)=>s+d.volume,0))}</strong></span><span class="stat">RSI <strong>${rsi.toFixed(1)}</strong></span></div>
 <div class="chart-tools"><div class="tf-bar">${KLINE_TYPES.map(t=>`<button class="tf-btn${activeTf===t[0]?' active':''}" onclick="setTimeframe('${t[0]}')">${t[1]}</button>`).join('')}</div><div class="hint">切换周期查看不同级别走势</div></div>
 <div class="chart-card"><div id="chart"></div></div>
+<div class="fg-box center-fg"><div class="fg-v neutral">?</div><div class="fg-info"><div class="fg-bar"><div class="fg-bar-fill" style="width:50%"></div></div><div class="fg-label">加载市场情绪...</div></div></div>
 <div class="data-panel">
   <div class="dp-title">📊 实时数据</div>
   <div class="dp-grid">
@@ -584,7 +603,7 @@ document.getElementById('center').innerHTML=`
 `;
 // ====== Render Right ======
 document.getElementById('right').innerHTML=`
-<div class="fg-box" id="fgBox"><div class="fg-v neutral" id="fgV">?</div><div class="fg-info"><div class="fg-bar"><div class="fg-bar-fill" id="fgF" style="width:50%"></div></div><div class="fg-label" id="fgL">加载情绪指数...</div></div></div>
+<div class="fg-box"><div class="fg-v neutral">?</div><div class="fg-info"><div class="fg-bar"><div class="fg-bar-fill" style="width:50%"></div></div><div class="fg-label">加载情绪指数...</div></div></div>
 <div class="msec"><div class="mtitle">📊 市场数据</div>
 <div class="mrow"><span class="ml">当前价格</span><span class="mv">$${fmt(price)}</span></div>
 <div class="mrow"><span class="ml">24h涨跌</span><span class="mv ${hl}">${ch24>0?'+':''}${ch24.toFixed(2)}%</span></div>
@@ -617,7 +636,7 @@ const vs=c.addHistogramSeries({priceFormat:{type:'volume'},priceScaleId:'volume'
 vs.setData(D.map((d,i)=>({time:d.time,value:d.volume,color:d.close>=d.open?'rgba(34,197,94,0.25)':'rgba(239,68,68,0.25)'})));
 new ResizeObserver(()=>c.applyOptions({width:el.clientWidth,height:window.matchMedia('(max-width: 900px)').matches?280:340})).observe(el);}catch(e){el.innerHTML='<div style="padding:80px 0;text-align:center;color:var(--red);font-size:13px;">图表渲染失败</div>';}},100);
 // Fear & Greed
-fetch('/api/fear-greed').then(r=>r.json()).then(f=>{if(f.value){document.getElementById('fgV').textContent=f.value;document.getElementById('fgV').className='fg-v '+(f.value<40?'fear':f.value>60?'greed':'neutral');document.getElementById('fgF').style.width=f.value+'%';document.getElementById('fgL').textContent=f.label;}}).catch(()=>{});}
+fetch('/api/fear-greed').then(r=>r.json()).then(f=>{if(f.value){document.querySelectorAll('.fg-box').forEach(box=>{const v=box.querySelector('.fg-v'),bar=box.querySelector('.fg-bar-fill'),lab=box.querySelector('.fg-label');if(v){v.textContent=f.value;v.className='fg-v '+(f.value<40?'fear':f.value>60?'greed':'neutral');}if(bar)bar.style.width=f.value+'%';if(lab)lab.textContent=f.label;});}}).catch(()=>{});}
 load();
 loadNews();
 setInterval(load,1000);
