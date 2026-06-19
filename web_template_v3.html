@@ -363,6 +363,121 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:
 .loading{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--text2);gap:12px;}
 .spinner{width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.7s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg)}}
+
+/* ===== V2 Pro Trading Terminal Skin ===== */
+:root{
+  --bg:#05080d;--bg2:#080d14;--card:#101824;--card2:#172131;
+  --accent:#1677ff;--accent2:#0d5fd8;--green:#00d084;--red:#ff4757;--yellow:#f5b83d;
+  --text:#eef4ff;--text2:#95a3b8;--text3:#5f6e82;--border:#1e2a3a;--border2:#314155;
+  --shadow:0 14px 40px rgba(0,0,0,0.28);--radius:8px;--radius-sm:6px;
+}
+[data-theme="light"]{
+  --bg:#f3f6fb;--bg2:#ffffff;--card:#ffffff;--card2:#edf2f8;
+  --text:#121826;--text2:#566174;--text3:#8792a4;--border:#dce4ef;--border2:#c5d0de;
+  --shadow:0 10px 30px rgba(15,23,42,0.08);
+}
+body{
+  background:radial-gradient(circle at 50% -20%,rgba(22,119,255,0.16),transparent 34%),linear-gradient(180deg,#070b12 0%,var(--bg) 44%);
+  overflow:hidden;
+}
+.nav{
+  height:58px;padding:0 20px;background:rgba(8,13,20,0.94);backdrop-filter:blur(18px);
+  border-bottom:1px solid #172234;position:sticky;top:0;z-index:120;
+}
+.nav-logo{font-size:21px!important;font-weight:900;letter-spacing:-0.7px;}
+.nav-logo::after{content:" Pro";font-size:11px;color:var(--green);-webkit-text-fill-color:var(--green);margin-left:6px;vertical-align:middle;letter-spacing:0;}
+.nav-btn{height:34px;border-radius:8px;padding:0 13px;background:#0d1420!important;color:var(--text2)!important;border:1px solid var(--border)!important;}
+.tabs{display:none;}
+.layout{grid-template-columns:320px minmax(680px,1fr) 340px;height:calc(100vh - 58px);background:#05080d;}
+.left,.right{background:linear-gradient(180deg,#080d14 0%,#060a10 100%);max-height:calc(100vh - 58px);}
+.left{border-right:1px solid #172234;}
+.right{border-left:1px solid #172234;padding:16px 14px;}
+.left::before,.right::before{
+  display:block;padding:16px 14px 10px;color:var(--text);font-size:13px;font-weight:900;
+  letter-spacing:0.6px;text-transform:uppercase;border-bottom:1px solid var(--border);
+}
+.left::before{content:"Market Matrix / 行情矩阵";}
+.right::before{content:"Derivatives Pulse / 合约情绪";}
+.left .search-wrap{padding:12px 14px;background:#080d14;}
+.left .search-wrap input{height:38px;background:#0d1522;border-color:#1f2c40;border-radius:8px;font-weight:700;}
+.cats,.sort-bar{padding-left:14px;padding-right:14px;background:#080d14;}
+.cat,.sort-btn{background:#111a28;border:1px solid #1c293b;color:#8fa1ba;font-weight:800;}
+.cat.active,.sort-btn.active{background:linear-gradient(135deg,#1677ff,#0b5bd3);box-shadow:0 8px 18px rgba(22,119,255,0.24);}
+.list-header{
+  grid-template-columns:1fr 86px 76px;padding:9px 14px;background:#070c13;
+  border-top:1px solid #101827;border-bottom:1px solid #172234;
+}
+.coin-row{grid-template-columns:1fr 86px 76px;min-height:40px;padding:7px 14px;border-bottom:1px solid rgba(30,42,58,0.58);}
+.coin-row:hover{background:#101824;}
+.coin-row.active{background:linear-gradient(90deg,rgba(22,119,255,0.18),rgba(22,119,255,0.04));border-left:3px solid var(--accent);}
+.coin-row .name{font-size:12px;font-weight:900;}
+.coin-row .name .cn{display:block;font-size:9px;color:#637188;}
+.coin-row .prc,.coin-row .chg{font-family:'SF Mono','Menlo',monospace;font-size:12px;font-weight:900;}
+.center{padding:16px 18px;background:#05080d;}
+.chart-header{
+  margin-bottom:10px;background:linear-gradient(180deg,#101824,#0b111b);
+  border-color:#223047;border-radius:8px;padding:12px 14px;
+}
+.chart-head-main h2{font-size:22px;font-weight:950;letter-spacing:-0.4px;}
+.chart-head-main .badge{border-radius:6px;text-transform:uppercase;}
+.chart-head-main .stat{background:#182236;border-color:#26364f;color:#8fa1ba;}
+.price-row{margin:4px 0 10px;}
+.price-row .main-price{font-size:34px;font-weight:950;letter-spacing:-1px;}
+.stats-row{gap:8px;margin-bottom:10px;}
+.stats-row .stat{background:#111a28;border:1px solid #1f2c40;border-radius:6px;font-size:11px;font-weight:800;}
+.chart-tools{margin-bottom:10px;background:#0c131e;border-color:#1f2c40;border-radius:8px;box-shadow:none;}
+.tf-btn{background:#131d2b;border-color:#26364f;color:#9badc5;border-radius:6px;}
+.tf-btn.active{background:#1677ff;border-color:#1677ff;color:white;}
+.chart-card{
+  padding:10px;background:linear-gradient(180deg,#101824,#0b111b);
+  border-color:#24324a;border-radius:8px;box-shadow:0 18px 45px rgba(0,0,0,0.32);
+}
+.chart-card #chart{height:430px;}
+.data-panel,.trade-plan,.reason-card,.sig-card,.home-panel{background:linear-gradient(180deg,#101824,#0b111b);border-color:#24324a;border-radius:8px;}
+.data-panel-title,.trade-plan-title{letter-spacing:-0.2px;}
+.dp-card,.plan-box,.score-card,.home-stat,.pick-card,.rank-item{background:#151f2e;border-color:#26364f;border-radius:7px;}
+.trade-plan{padding:18px;}
+.trade-plan-grid{grid-template-columns:0.95fr 1.15fr;gap:14px;}
+.plan-label,.score-label,.dp-label{color:#8292aa;font-size:11px;font-weight:800;text-transform:uppercase;}
+.plan-value,.score-value,.dp-value{font-weight:950;}
+.msec{background:#0d1420;border:1px solid #1f2c40;border-radius:8px;padding:12px;margin-bottom:12px;}
+.msec .mtitle{
+  margin:-12px -12px 10px;padding:12px;border-bottom:1px solid #1f2c40;
+  color:#dbe7f8;font-size:12px;font-weight:950;letter-spacing:0;text-transform:none;background:#121b2a;border-radius:8px 8px 0 0;
+}
+.mrow{padding:6px 0;}
+.mrow .mv{font-family:'SF Mono','Menlo',monospace;font-weight:900;}
+.fg-box{background:#141f30;border-color:#283953;border-radius:8px;}
+.news-card{background:#0d1420;border-color:#1f2c40;border-radius:8px;}
+.home-dash{gap:14px;}
+.home-panel{box-shadow:var(--shadow);}
+.home-panel h3{font-size:15px;font-weight:950;}
+
+@media(max-width:900px){
+  body{overflow:auto;background:#05080d;}
+  .nav{height:54px;padding:0 12px;position:fixed;}
+  .nav-logo{font-size:18px!important;}
+  .tabs{display:none!important;}
+  .layout{height:auto;min-height:100vh;padding-top:54px;background:#05080d;}
+  .left,.right{max-height:none;background:#05080d;border:0;}
+  .left::before,.right::before{display:none;}
+  .mobile-picker-head{
+    display:flex;margin:10px 10px 0;padding:12px;background:#101824;border:1px solid #24324a;
+    border-radius:8px;box-shadow:var(--shadow);
+  }
+  .mobile-picker-toggle{background:#172131;border-color:#314155;border-radius:6px;}
+  .left.picker-collapsed .search-wrap,.left.picker-collapsed .cats,.left.picker-collapsed .sort-bar,.left.picker-collapsed .list-header,.left.picker-collapsed .coin-list{display:none;}
+  .left .search-wrap,.cats,.sort-bar{margin:0 10px;background:#101824;border-left:1px solid #24324a;border-right:1px solid #24324a;}
+  .coin-list{margin:0 10px 10px;border:1px solid #24324a;border-top:0;border-radius:0 0 8px 8px;background:#080d14;}
+  .center{padding:10px;gap:10px;}
+  .center::before{content:"K线策略工作台";display:block;padding:2px 2px 0;color:#dbe7f8;font-size:13px;font-weight:950;}
+  .chart-header,.price-row,.stats-row,.chart-tools,.chart-card,.data-panel,.trade-plan,.reason-card{margin-bottom:10px;}
+  .chart-card #chart{height:330px;}
+  .data-panel{order:8;}
+  .trade-plan{order:7;}
+  .right{padding:10px;}
+  .right::before{content:"合约情绪与快讯";display:block;padding:4px 2px 8px;border:0;}
+}
 </style>
 </head>
 <body>
@@ -635,22 +750,22 @@ document.getElementById('center').innerHTML=`
 // ====== Render Right ======
 document.getElementById('right').innerHTML=`
 <div class="fg-box"><div class="fg-v neutral">?</div><div class="fg-info"><div class="fg-bar"><div class="fg-bar-fill" style="width:50%"></div></div><div class="fg-label">加载情绪指数...</div></div></div>
-<div class="msec"><div class="mtitle">📊 市场数据</div>
+<div class="msec"><div class="mtitle">📊 合约数据</div>
 <div class="mrow"><span class="ml">当前价格</span><span class="mv">$${fmt(price)}</span></div>
 <div class="mrow"><span class="ml">24h涨跌</span><span class="mv ${hl}">${ch24>0?'+':''}${ch24.toFixed(2)}%</span></div>
 <div class="mrow"><span class="ml">24h最高</span><span class="mv">$${fmt(hi)}</span></div>
 <div class="mrow"><span class="ml">24h最低</span><span class="mv">$${fmt(lo)}</span></div>
 <div class="mrow"><span class="ml">RSI(14)</span><span class="mv" style="color:${rsi>65?'var(--red)':rsi<35?'var(--green)':'var(--text)'}">${rsi.toFixed(1)}</span></div></div>
-<div class="msec"><div class="mtitle">📈 技术指标</div>
+<div class="msec"><div class="mtitle">📈 信号因子</div>
 <div class="mrow"><span class="ml">趋势</span><span class="mv" style="color:${trend==='bullish'?'var(--green)':trend==='bearish'?'var(--red)':'var(--text2)'}">${trend==='bullish'?'多头':trend==='bearish'?'空头':'震荡'}</span></div>
 <div class="mrow"><span class="ml">布林位置</span><span class="mv">${(bb*100).toFixed(0)}%</span></div>
 <div class="mrow"><span class="ml">MACD柱</span><span class="mv" style="color:${macdH[lst]>0?'var(--green)':'var(--red)'}">${!isNaN(macdH[lst])?macdH[lst].toFixed(2):'-'}</span></div>
 <div class="mrow"><span class="ml">成交量比</span><span class="mv">${vr[lst].toFixed(1)}x</span></div></div>
-<div class="msec"><div class="mtitle">🎯 支撑阻力</div>
+<div class="msec"><div class="mtitle">🎯 关键价位</div>
 <div class="mrow"><span class="ml">压力(上轨)</span><span class="mv" style="color:var(--red)">$${fmt(bu[lst])}</span></div>
 <div class="mrow"><span class="ml">支撑(下轨)</span><span class="mv" style="color:var(--green)">$${fmt(bl[lst])}</span></div>
 <div class="mrow"><span class="ml">中轨</span><span class="mv">$${fmt(bm[lst])}</span></div></div>
-<div class="msec"><div class="mtitle">📉 均线</div>
+<div class="msec"><div class="mtitle">📉 趋势均线</div>
 <div class="mrow"><span class="ml">MA20</span><span class="mv" style="color:${m20[lst]>price?'var(--red)':'var(--green)'}">$${fmt(m20[lst])}</span></div>
 <div class="mrow"><span class="ml">EMA20</span><span class="mv" style="color:${e20[lst]>price?'var(--red)':'var(--green)'}">$${fmt(e20[lst])}</span></div>
 <div class="mrow"><span class="ml">EMA50</span><span class="mv" style="color:${e50[lst]>price?'var(--red)':'var(--green)'}">$${fmt(e50[lst])}</span></div>
@@ -660,13 +775,13 @@ document.getElementById('right').innerHTML=`
 renderNewsPanel();
 // ====== Chart ======
 setTimeout(()=>{const el=document.getElementById('chart');if(!el||typeof LightweightCharts==='undefined')return;
-try{const chartHeight=window.matchMedia('(max-width: 900px)').matches?280:340;const c=LightweightCharts.createChart(el,{layout:{background:{color:'transparent'},textColor:'#8b949e'},grid:{vertLines:{color:'#252d3f'},horzLines:{color:'#252d3f'}},crosshair:{mode:LightweightCharts.CrosshairMode.Normal},timeScale:{borderColor:'#2d3548',timeVisible:true,secondsVisible:false},rightPriceScale:{borderColor:'#2d3548'},width:el.clientWidth,height:chartHeight});
+try{const chartHeight=window.matchMedia('(max-width: 900px)').matches?330:430;const c=LightweightCharts.createChart(el,{layout:{background:{color:'transparent'},textColor:'#8b949e'},grid:{vertLines:{color:'#182235'},horzLines:{color:'#182235'}},crosshair:{mode:LightweightCharts.CrosshairMode.Normal},timeScale:{borderColor:'#24324a',timeVisible:true,secondsVisible:false},rightPriceScale:{borderColor:'#24324a'},width:el.clientWidth,height:chartHeight});
 c.addCandlestickSeries({upColor:'#22c55e',downColor:'#ef4444',borderUpColor:'#22c55e',borderDownColor:'#ef4444',wickUpColor:'#22c55e',wickDownColor:'#ef4444'}).setData(D.map(d=>({time:d.time,open:d.open,high:d.high,low:d.low,close:d.close})));
 const al=(a,cl)=>{const s=c.addLineSeries({color:cl,lineWidth:1,priceLineVisible:false});s.setData(a.map((v,i)=>({time:D[i].time,value:v})).filter(d=>!isNaN(d.value)));return s;};
 al(e9,'#3b82f6');al(e21,'#f59e0b');al(e50,'#8b5cf6');
 const vs=c.addHistogramSeries({priceFormat:{type:'volume'},priceScaleId:'volume'});c.priceScale('volume').applyOptions({scaleMargins:{top:0.85,bottom:0}});
 vs.setData(D.map((d,i)=>({time:d.time,value:d.volume,color:d.close>=d.open?'rgba(34,197,94,0.25)':'rgba(239,68,68,0.25)'})));
-new ResizeObserver(()=>c.applyOptions({width:el.clientWidth,height:window.matchMedia('(max-width: 900px)').matches?280:340})).observe(el);}catch(e){el.innerHTML='<div style="padding:80px 0;text-align:center;color:var(--red);font-size:13px;">图表渲染失败</div>';}},100);
+new ResizeObserver(()=>c.applyOptions({width:el.clientWidth,height:window.matchMedia('(max-width: 900px)').matches?330:430})).observe(el);}catch(e){el.innerHTML='<div style="padding:80px 0;text-align:center;color:var(--red);font-size:13px;">图表渲染失败</div>';}},100);
 // Fear & Greed
 fetch(`${API_BASE}/api/fear-greed`).then(r=>r.json()).then(f=>{if(f.value){document.querySelectorAll('.fg-box').forEach(box=>{const v=box.querySelector('.fg-v'),bar=box.querySelector('.fg-bar-fill'),lab=box.querySelector('.fg-label');if(v){v.textContent=f.value;v.className='fg-v '+(f.value<40?'fear':f.value>60?'greed':'neutral');}if(bar)bar.style.width=f.value+'%';if(lab)lab.textContent=f.label;});}}).catch(()=>{});}
 load();
