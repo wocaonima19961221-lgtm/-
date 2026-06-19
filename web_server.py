@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import os, uvicorn, subprocess, json, xml.etree.ElementTree as ET, urllib.parse, time, re, threading
+import os, uvicorn, subprocess, json, xml.etree.ElementTree as ET, urllib.parse, time, re, threading, concurrent.futures
 from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
@@ -23,10 +23,11 @@ STOCK_PERP_BASES = {
     'META', 'GOOGL', 'AMD', 'NFLX'
 }
 STOCK_PERP_SYMBOLS = {f'{base}USDT' for base in STOCK_PERP_BASES}
+NASDAQ_STOCKS = sorted(STOCK_PERP_BASES)
 
 def curl_get(url, timeout=20):
     try:
-        r = subprocess.run(['curl', '-s', '-L', '--max-time', str(timeout), '--tls-max', '1.2', url],
+        r = subprocess.run(['curl', '-s', '-L', '-A', 'Mozilla/5.0', '--max-time', str(timeout), '--tls-max', '1.2', url],
                          capture_output=True, text=True, timeout=timeout+5)
         if r.returncode == 0 and r.stdout:
             return json.loads(r.stdout)
@@ -40,6 +41,51 @@ def binance_get(path, timeout=15):
             return d
     return None
 
+def num(v):
+    try:
+        return float(str(v).replace('$', '').replace('%', '').replace(',', '').replace('+', '').strip())
+    except:
+        return 0.0
+
+def load_nasdaq_stock_contracts():
+    def one(base):
+        d = curl_get(f'https://api.nasdaq.com/api/quote/{base}/info?assetclass=stocks', 12)
+        p = (((d or {}).get('data') or {}).get('primaryData') or {})
+        price = num(p.get('lastSalePrice'))
+        vol = num(p.get('volume'))
+        if price <= 0:
+            return None
+        return {
+            'symbol': f'{base}-USDT',
+            'price': price,
+            'change_24h': round(num(p.get('percentageChange')), 2),
+            'high_24h': price,
+            'low_24h': price,
+            'volume_24h': vol,
+            'turnover_24h': vol * price,
+            'source': 'nasdaq',
+            'market_type': 'stock_perp',
+        }
+    with concurrent.futures.ThreadPoolExecutor(max_workers=8) as ex:
+        return [r for r in ex.map(one, NASDAQ_STOCKS) if r]
+
+def nasdaq_stock_klines(base, ktype):
+    todate = time.strftime('%Y-%m-%d')
+    fromdate = time.strftime('%Y-%m-%d', time.localtime(time.time() - 86400 * 730))
+    d = curl_get(f'https://api.nasdaq.com/api/quote/{base}/historical?assetclass=stocks&fromdate={fromdate}&todate={todate}&limit=9999', 20)
+    raw = ((((d or {}).get('data') or {}).get('tradesTable') or {}).get('rows') or [])
+    rows = []
+    for r in reversed(raw):
+        try:
+            t = int(time.mktime(time.strptime(r.get('date'), '%m/%d/%Y')))
+            o, c, h, l, v = num(r.get('open')), num(r.get('close')), num(r.get('high')), num(r.get('low')), num(r.get('volume'))
+            if min(o, c, h, l) <= 0:
+                continue
+            rows.append([str(t), str(o), str(c), str(h), str(l), str(v), str(v * c)])
+        except:
+            continue
+    return rows[-500:]
+
 def load_binance_stock_contracts():
     global STOCK_CONTRACTS_CACHE, STOCK_CONTRACTS_TS
     now = time.time()
@@ -48,6 +94,7 @@ def load_binance_stock_contracts():
     d = binance_get('/fapi/v1/ticker/24hr', 6)
     if not isinstance(d, list):
         STOCK_CONTRACTS_TS = now
+        STOCK_CONTRACTS_CACHE = load_nasdaq_stock_contracts() or STOCK_CONTRACTS_CACHE
         return list(STOCK_CONTRACTS_CACHE)
     contracts = []
     for t in d:
@@ -71,8 +118,10 @@ def load_binance_stock_contracts():
             'market_type': 'stock_perp',
         })
     STOCK_CONTRACTS_CACHE = contracts
+    if not STOCK_CONTRACTS_CACHE:
+        STOCK_CONTRACTS_CACHE = load_nasdaq_stock_contracts()
     STOCK_CONTRACTS_TS = now
-    return contracts
+    return list(STOCK_CONTRACTS_CACHE)
 
 def zh_polish(text):
     pairs = {
@@ -204,7 +253,10 @@ def kline_proxy(symbol: str, type: str = "1min"):
                 data.append([str(int(k[0]) // 1000), str(k[1]), str(k[4]), str(k[2]), str(k[3]), str(k[5]), '0'])
             if data:
                 return {'code': '200000', 'data': data}
-        raise HTTPException(500, "美股永续K线获取失败")
+        rows = nasdaq_stock_klines(raw_binance_symbol[:-4], type)
+        if rows:
+            return {'code': '200000', 'data': rows}
+        raise HTTPException(500, "美股行情K线获取失败")
     d = curl_get(f'https://api.kucoin.com/api/v1/market/candles?type={type}&symbol={symbol}&startAt={start_at}&endAt={end_at}', 25)
     if d and d.get('code') == '200000': return d
     raise HTTPException(500, "K线获取失败")
