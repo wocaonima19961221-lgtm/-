@@ -50,7 +50,7 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:
 .left .search-wrap input{width:100%;padding:9px 14px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:13px;outline:none;transition:border 0.15s;}
 .left .search-wrap input:focus{border-color:var(--accent);}
 .left .search-wrap input::placeholder{color:var(--text3);}
-.mobile-picker-toggle{display:none;}
+.mobile-picker-head{display:none;}
 .cats{display:flex;gap:3px;padding:8px 10px 6px;flex-wrap:wrap;border-bottom:1px solid var(--border);}
 .cat{padding:4px 10px;border-radius:5px;font-size:11px;font-weight:500;cursor:pointer;background:var(--card);color:var(--text2);border:none;transition:all 0.12s;}
 .cat:hover{color:var(--text);}
@@ -216,17 +216,18 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:
   .tabs{padding:0 12px;overflow-x:auto;}
   .tab{padding:10px 12px;font-size:12px;white-space:nowrap;}
   .layout{display:flex;flex-direction:column;height:auto;min-height:calc(100vh - 94px);overflow:visible;}
-  .left{order:1;border-right:0;border-top:0;border-bottom:1px solid var(--border);max-height:none;height:auto;overflow:visible;}
+  .left{order:1;border-right:0;border-top:0;border-bottom:1px solid var(--border);max-height:none;height:auto;overflow:visible;position:sticky;top:94px;z-index:90;background:var(--bg2);}
   .center{order:2;padding:12px;background:var(--bg);overflow:visible;}
   .right{order:3;border-left:0;border-top:1px solid var(--border);padding:12px;overflow:visible;}
-  .left::before,.center::before,.right::before{display:block;padding:10px 12px 8px;color:var(--text);font-size:13px;font-weight:800;letter-spacing:0;border-bottom:1px solid var(--border);background:var(--bg2);}
-  .left::before{content:"1 选择分类与币种";}
+  .center::before,.right::before{display:block;padding:10px 12px 8px;color:var(--text);font-size:13px;font-weight:800;letter-spacing:0;border-bottom:1px solid var(--border);background:var(--bg2);}
   .center::before{content:"2 分析推荐 / 交易方向";margin:-12px -12px 12px;}
   .right::before{content:"3 快讯与市场情绪";margin:-12px -12px 12px;}
   .right #rightPlaceholder{display:none;}
-  .mobile-picker-toggle{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;padding:10px 12px;background:var(--card);color:var(--text);border:0;border-bottom:1px solid var(--border);font-size:13px;font-weight:800;text-align:left;}
-  .mobile-picker-toggle span{font-size:11px;color:var(--text2);font-weight:700;}
-  .left.mobile-collapsed{position:sticky;top:94px;z-index:90;box-shadow:var(--shadow);}
+  .mobile-picker-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px 8px;color:var(--text);border-bottom:1px solid var(--border);background:var(--bg2);box-shadow:var(--shadow);}
+  .mobile-picker-title{font-size:13px;font-weight:800;white-space:nowrap;}
+  .mobile-picker-toggle{display:inline-flex;align-items:center;gap:6px;max-width:55%;padding:4px 9px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--text);font-size:11px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .mobile-picker-toggle span{color:var(--text2);font-weight:700;overflow:hidden;text-overflow:ellipsis;}
+  .left.mobile-collapsed{box-shadow:var(--shadow);}
   .left.mobile-collapsed .search-wrap,.left.mobile-collapsed .cats,.left.mobile-collapsed .sort-bar,.left.mobile-collapsed .list-header,.left.mobile-collapsed .coin-list{display:none;}
   .left .search-wrap{padding:10px 12px 8px;}
   .cats,.sort-bar{padding-left:12px;padding-right:12px;overflow-x:auto;flex-wrap:nowrap;}
@@ -371,7 +372,7 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:
 <div class="tabs"><div class="tab active">📊 分析预测</div></div>
 <div class="layout">
   <div class="left" id="leftPanel">
-    <button class="mobile-picker-toggle" id="mobilePickerToggle" onclick="toggleMobilePicker()">选择分类与币种 <span>展开</span></button>
+    <div class="mobile-picker-head"><div class="mobile-picker-title">1 选择分类与币种</div><button class="mobile-picker-toggle" id="mobilePickerToggle" onclick="toggleMobilePicker()">展开 <span>未选择</span></button></div>
     <div class="search-wrap"><input id="search" placeholder="搜索合约名称或币种..." oninput="doSearch()"></div>
     <div class="cats" id="cats"></div>
     <div class="sort-bar" id="sortBar"></div>
@@ -431,7 +432,7 @@ function switchCat(id){activeCat=id;resetListStructure();renderCats();doFilter()
 function doSearch(){resetListStructure();doFilter();}
 function isMobileView(){return window.matchMedia('(max-width: 900px)').matches;}
 function scrollToMobileAnalysis(){if(isMobileView()){setTimeout(()=>{const el=document.getElementById('center');if(!el)return;const y=el.getBoundingClientRect().top+window.scrollY-6;window.scrollTo(0,y);},120);}}
-function updateMobilePickerToggle(){const btn=document.getElementById('mobilePickerToggle'),left=document.getElementById('leftPanel');if(!btn||!left)return;const picked=sel?sel.replace('-USDT','/USDT'):'未选择';btn.innerHTML=`选择分类与币种 · ${picked} <span>${left.classList.contains('mobile-collapsed')?'展开':'收起'}</span>`;}
+function updateMobilePickerToggle(){const btn=document.getElementById('mobilePickerToggle'),left=document.getElementById('leftPanel');if(!btn||!left)return;const picked=sel?sel.replace('-USDT','/USDT'):'未选择';const action=left.classList.contains('mobile-collapsed')?'展开':'收起';btn.innerHTML=`${action} <span>${picked}</span>`;}
 function toggleMobilePicker(force){const left=document.getElementById('leftPanel');if(!left)return;if(force==='open')left.classList.remove('mobile-collapsed');else if(force==='close')left.classList.add('mobile-collapsed');else left.classList.toggle('mobile-collapsed');updateMobilePickerToggle();}
 function doFilter(){let f=allC;if(activeCat!=='all'){f=f.filter(c=>getCat(c).id===activeCat);}
 const q=document.getElementById('search').value.toUpperCase().trim();if(q){const q2=q.replace('USDT','').replace('-','');f=f.filter(c=>{const b=c.symbol.replace('-USDT','');return c.symbol.includes(q2)||b.includes(q2)||cn(c.symbol).toUpperCase().includes(q2);});}
